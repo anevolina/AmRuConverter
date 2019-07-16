@@ -1,0 +1,64 @@
+#Add new lines in a way "item, grams in 1 cup" no additional measurements.
+
+
+butter, 227
+all-purpose flour,  128
+cake flour, 114
+margarine, 230
+milk, 244
+confectioners sugar, 128
+bread flour, 136
+rolled oats, 85
+white sugar, 201
+granulated sugar, 201
+brown sugar, 220
+honey,  340
+
+#lets check how it works
+corn syrup,  340
+molasses, 340
+almond powder, 100
+almond flakes, 85
+
+    #and again
+almond, 150
+Treacle, 325
+Blueberries, 100
+Buttermilk, 225
+Caster Sugar, 225
+Superfine Sugar, 225
+Chocolate Chips, 150
+Cocoa Powder, 100
+Coconut, 100
+Powdered Sugar, 100
+Icing Sugar, 100
+Corn Starch, 100
+Cornflour, 100
+Cornmeal, 150
+Cream Cheese, 120
+Soft Cheese, 120
+Muscovado Sugar, 200
+Dates, 225
+Golden Syrup, 340
+Jam, 325
+Jelly, 325
+Lentils, 200
+Maple Syrup, 340
+Mincemeat, 225
+old fashion oats, 140
+porridge oats, 140
+Cheese, 100
+Pasta, 120
+Chopped Peanuts, 120
+whole peanuts, 150
+peanuts, 135
+Peanut Butter, 250
+Pecans, 120
+Pearl Barley, 200
+barley, 200
+Raisins, 150
+Sultanas, 150
+Raspberries, 120
+Rice, 200
+Strawberries, 200
+Walnuts, 120
