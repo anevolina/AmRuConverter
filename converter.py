@@ -4,6 +4,8 @@ Starting from temperature - Fahrenheit to Celsius
 and finishing with cups/tsp/Tbsp to grams
 '''
 
+import re
+
 
 class ARConverter:
 
@@ -23,7 +25,60 @@ class ARConverter:
                 new_coefficient = line.strip().split(':')
                 self.coefficients[new_coefficient[0]] = int(new_coefficient[1])
 
-        self.ml_measures = {'tsp': 5, 'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'oz': 29.6, 'quart ': 946.4}
+        self.ml_measures = {'tsp': 5, 'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'oz': 29.6, 'quart ': 946.4, 'cup': 240}
+
+        self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'pound', 'pounds'], ['gr', 'gram', 'grams']]
+
+    def break_line(self, line):
+        amount = re.findall(r'\d[\d /]+', line)
+        if amount[0]:
+            amount = self.convert_amount(amount[0])
+        words = re.findall(r'[A-Za-z]+', line)
+        for word in words:
+            for i in range(len(self.units)):
+                if word in self.units[i]:
+                    measure = self.units[i][0]
+                    words.remove(word)
+
+            if word in self.coefficients:
+                item = word
+                words.remove(word)
+        try:
+            print(amount, end=' ')
+        except: pass
+
+        try:
+            print(measure, end=' ')
+        except: pass
+
+        try:
+            print(item, end=' ')
+        except: pass
+
+        print(' '.join(words))
+
+    def convert_amount(self, amount):
+        ''' amount - is a string in format 1 3/4 or 1/2 - integer part
+        divided from the fraction by space symbol
+        If fraction part is incomplete ( /8) or (8/ ) it's ignored
+
+        If some integer appears after fraction it's ignored
+        '''
+
+        string_numbers = amount.split()
+        result = 0
+        for string_number in string_numbers:
+            if '/' in string_number:
+                fraction_numbers = string_number.split('/')
+                try:
+                    result += round(int(fraction_numbers[0])/int(fraction_numbers[1]), 2)
+                    return result
+                except:
+                    print('Error in fraction', string_number)
+                    pass
+            else:
+                result += int(string_number)
+        return result
 
     def cups_grams(self, item, cups):
         """Try to convert item from cups to grams if it is in self.coefficients
