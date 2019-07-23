@@ -9,13 +9,16 @@ sugar, brown:220
 """
 
 import re
+import json
+from os.path import join, dirname
 
 class MeasurementsFileMaker():
 
-    def __init__(self):
-        self.coefficients = []
-        self.uniq_coefficients = []
+    def __init__(self, path):
         self.multi_coefficients = []
+        self.dic_coefficients = {}
+
+        self.path = join(dirname(__file__), path)
 
         self.make_measurements_file()
 
@@ -25,12 +28,7 @@ class MeasurementsFileMaker():
         self.make_coefficients()
 
         with open('coefficients.json', 'w+') as coefficient:
-            for measure in sorted(self.coefficients):
-                if len(measure) == 2:
-                    coefficient.write(measure[0] + ':' + measure[1] + '\n')
-                else:
-                    coefficient.write('{}, {}: {}\n'.format(measure[0],
-                                                          ' '.join(measure[i] for i in range(1, len(measure)-1)), measure[-1]))
+            json.dump(self.dic_coefficients, coefficient)
 
     def make_coefficients(self):
         """Read measurements.txt file with raw messy input of coefficients,
@@ -38,7 +36,7 @@ class MeasurementsFileMaker():
         Bread flour for example.
         """
 
-        measurements_file = open('measurements.txt', 'r')
+        measurements_file = open(self.path, 'r')
         for line in measurements_file:
             if line == '\n' or line.strip()[0] == '#':
                 continue
@@ -47,7 +45,6 @@ class MeasurementsFileMaker():
 
         self.process_multi_coefficients()
 
-
     def process_line(self, line):
         """Divide a line for words and numbers. If there are more than one word, handle this item separately"""
 
@@ -55,8 +52,7 @@ class MeasurementsFileMaker():
         weight = re.findall(r'[\d]+', line)
 
         if len(items) == 1:
-            self.coefficients.append([x.lower() for x in items] + weight)
-            self.uniq_coefficients.append(items[0].lower())
+            self.dic_coefficients[items[0].lower()] = int(weight[0])
         else:
             self.multi_coefficients.append([x.lower() for x in items] + weight)
 
@@ -70,15 +66,39 @@ class MeasurementsFileMaker():
 
     def parse_multi_item(self, multi_item):
         """ We have to check that there is an initial item for every multi-word item -
-        for example, for 'Brown Sugar' we have to have single 'Sugar' item"""
+        for example, for 'Brown Sugar' we have to have single 'Sugar' item.
+        If there is no initial item - it could be missed"""
 
         check = False
         for i in range(len(multi_item) - 1):
-            if multi_item[i] in self.uniq_coefficients:
-                multi_item[0], multi_item[i] = multi_item[i], multi_item[0]
+            item_in_dictionary = self.dic_coefficients.get(multi_item[i])
+            if item_in_dictionary:
+                self.add_multi_item_in_dic(multi_item, i)
+
                 check = True
                 break
         if not check:
             print('No initial item for multi-item', multi_item)
-        self.coefficients.append(multi_item)
+            item_name = ' '.join(multi_item[i] for i in range(len(multi_item)-1))
+            self.dic_coefficients.update({item_name: int(multi_item[-1])})
 
+
+
+    def add_multi_item_in_dic(self, item, position):
+        """Add sub dictionary for items with multiple measures - such as sugar -
+        we have different weight in 1cup of brown, powdered, granulated, etc"""
+
+        item_name = item[position]
+        previous_coef = self.dic_coefficients[item_name]
+        item.remove(item_name)
+        item_spec = ' '. join(item[i] for i in range(len(item) - 1))
+
+        if not type(previous_coef) == dict:
+            self.dic_coefficients.update({item_name: {'': previous_coef, item_spec: int(item[-1])}})
+        else:
+            self.dic_coefficients[item_name].update({item_spec: int(item[-1])})
+        pass
+
+
+
+start = MeasurementsFileMaker('measurements.txt')

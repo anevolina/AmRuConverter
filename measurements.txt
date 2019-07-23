@@ -3,6 +3,7 @@
 
 butter, 227
 all-purpose flour,  128
+flour, 128
 cake flour, 114
 margarine, 230
 milk, 244
@@ -10,15 +11,18 @@ confectioners sugar, 128
 bread flour, 136
 rolled oats, 85
 white sugar, 201
+sugar 201
 granulated sugar, 201
 brown sugar, 220
 honey,  340
 
 #lets check how it works
 corn syrup,  340
+syrup 340
 molasses, 340
 almond powder, 100
 almond flakes, 85
+Chocolate 150
 
     #and again
 almond, 150
@@ -29,10 +33,12 @@ Caster Sugar, 225
 Superfine Sugar, 225
 Chocolate Chips, 150
 Cocoa Powder, 100
+cocoa 100
 Coconut, 100
 Powdered Sugar, 100
 Icing Sugar, 100
 Corn Starch, 100
+Starch, 100
 Cornflour, 100
 Cornmeal, 150
 Cream Cheese, 120
@@ -46,6 +52,7 @@ Lentils, 200
 Maple Syrup, 340
 Mincemeat, 225
 old fashion oats, 140
+oats 140
 porridge oats, 140
 Cheese, 100
 Pasta, 120
@@ -62,3 +69,4 @@ Raspberries, 120
 Rice, 200
 Strawberries, 200
 Walnuts, 120
+For test, 67
