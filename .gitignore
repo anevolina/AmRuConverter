@@ -3,4 +3,4 @@ ar_conv_venv
 __pycache__
 .idea
 Data
-main.txt
+main.py
