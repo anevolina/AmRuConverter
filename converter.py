@@ -5,6 +5,7 @@ and finishing with cups/tsp/Tbsp to grams
 '''
 
 import re
+import json
 
 
 class ARConverter:
@@ -21,43 +22,72 @@ class ARConverter:
 
         self.coefficients = dict()
         with open('coefficients.json', 'r') as coefficients:
-            for line in coefficients:
-                new_coefficient = line.strip().split(':')
-                self.coefficients[new_coefficient[0]] = int(new_coefficient[1])
+            self.coefficients = json.load(coefficients)
 
-        self.ml_measures = {'tsp': 5, 'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'oz': 29.6, 'quart ': 946.4, 'cup': 240}
+        self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'oz': 29.6, 'quart ': 946.4, 'cup': 240}
 
-        self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'pound', 'pounds'], ['gr', 'gram', 'grams']]
+        self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'pound', 'pounds'],
+                      ['gr', 'gram', 'grams'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon'], ['gallon', 'gallons'],
+                      ['pint', 'pints'], ['quart', 'quarts']]
 
     def break_line(self, line):
+        """Divide line into amount, measure, item and another words in it"""
+
+        result = {'amount': 0, 'measure': '', 'item': '', 'words': ''}
         amount = re.findall(r'\d[\d /]+', line)
         if amount[0]:
-            amount = self.convert_amount(amount[0])
+            amount = self.str_to_int_convert_amount(amount[0])
+            result.update({'amount': amount})
         words = re.findall(r'[A-Za-z]+', line)
         for word in words:
             for i in range(len(self.units)):
-                if word in self.units[i]:
+                if word.lower() in self.units[i]:
                     measure = self.units[i][0]
                     words.remove(word)
+                    result.update({'measure': measure})
 
             if word in self.coefficients:
-                item = word
                 words.remove(word)
-        try:
-            print(amount, end=' ')
-        except: pass
+                result.update({'item': word})
 
-        try:
-            print(measure, end=' ')
-        except: pass
+        result.update({'words': words})
+        # print(result)
+        return result
 
-        try:
-            print(item, end=' ')
-        except: pass
+    def process_line(self, line):
+        components = self.break_line(line)
+        item = components['item']
+        measure = components['measure']
+        amount = components['amount']
+        around_words = components['words']
 
-        print(' '.join(words))
+        if measure == 'cup':
+            cups_to_grams = self.cups_grams(item, amount, around_words)
+            if cups_to_grams[1]:
+                # result = ' '.join([str(cups_to_grams[0]), 'grams', item] + around_words)
+                result = self.concatenate_result(cups_to_grams[0], 'grams', item, *around_words)
 
-    def convert_amount(self, amount):
+            # else:
+                # result = ' '.join([str(amount), measure, item] + around_words)
+
+        elif measure == 'oz':
+            grams = self.oz_grams(amount)
+            result = self.concatenate_result(grams, 'grams', item, *around_words)
+
+        else:
+            # result = ' '.join([str(amount), measure, item] + around_words)
+            result = self.concatenate_result(amount, measure, item, *around_words)
+
+        return result + '\n'
+
+    def concatenate_result(self, *args):
+        result = ''
+        for arg in args:
+            if arg != '':
+                result += str(arg) + ' '
+        return result.strip()
+
+    def str_to_int_convert_amount(self, amount):
         ''' amount - is a string in format 1 3/4 or 1/2 - integer part
         divided from the fraction by space symbol
         If fraction part is incomplete ( /8) or (8/ ) it's ignored
@@ -80,14 +110,26 @@ class ARConverter:
                 result += int(string_number)
         return result
 
-    def cups_grams(self, item, cups):
+    def cups_grams(self, item, cups, words):
         """Try to convert item from cups to grams if it is in self.coefficients
         dictionary. If everything went correct return new measure and TRUE flag.
         If item is not in dictionary - return input amount of cups and FALSE flag
         """
+        item_in_coefficients = self.coefficients.get(item)
+        if item_in_coefficients:
+            if type(self.coefficients[item]) == dict:
 
-        if item in self.coefficients:
-            return [round(self.coefficients[item] * cups), True]
+                for spec in words:
+                    spec_in_dic = self.coefficients[item].get(spec)
+                    if spec_in_dic:
+                        grams = self.coefficients[item][spec] * cups
+                        break
+                    grams = self.coefficients[item][''] * cups
+
+            else:
+                grams = self.coefficients[item] * cups
+
+            return [grams, True]
         else:
             print('INVALID PRODUCT: ', item)
             return [cups, False]
