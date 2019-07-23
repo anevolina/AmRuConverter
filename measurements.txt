@@ -2,7 +2,9 @@
 
 
 butter, 227
+salted butter, 227
 all-purpose flour,  128
+purpose flour,  128
 flour, 128
 cake flour, 114
 margarine, 230
