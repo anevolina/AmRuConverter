@@ -42,25 +42,13 @@ class TestTemperatureConvert(unittest.TestCase):
         celsius = self.my_converter.fahrenheit_celsius(-320)
         self.assertEqual(celsius, -196)
 
-    def test_celsius_fahrenheit_high(self):
-        fahrenheit = self.my_converter.celsius_fahrenheit(220)
-        self.assertEqual(fahrenheit, 428)
-
-    def test_celsius_fahrenheit_zero(self):
-        fahrenheit = self.my_converter.celsius_fahrenheit(0)
-        self.assertEqual(fahrenheit, 32)
-
-    def test_celsius_fahrenheit_low(self):
-        fahrenheit = self.my_converter.celsius_fahrenheit(-100)
-        self.assertEqual(fahrenheit, -148)
-
     def test_process_line_cup(self):
         line1 = self.my_converter.process_line('1 c milk')
         line2 = self.my_converter.process_line('1 1/2 cup milk')
         line3 = self.my_converter.process_line('0 cups milk')
         self.assertEqual(line1, '244 grams milk')
         self.assertEqual(line2, '366 grams milk')
-        self.assertEqual(line3, 'grams milk')
+        self.assertEqual(line3, '0 grams milk')
 
     def test_process_line_oz(self):
         line1 = self.my_converter.process_line('1 oz milk')
@@ -68,7 +56,7 @@ class TestTemperatureConvert(unittest.TestCase):
         line3 = self.my_converter.process_line('0 ounce milk')
         self.assertEqual(line1, '28 grams milk')
         self.assertEqual(line2, '43 grams milk')
-        self.assertEqual(line3, 'grams milk')
+        self.assertEqual(line3, '0 grams milk')
 
     def test_process_line_tsp(self):
         line1 = self.my_converter.process_line('1 tsp soda')
@@ -82,7 +70,7 @@ class TestTemperatureConvert(unittest.TestCase):
         line3 = self.my_converter.process_line('0 gallons milk')
         self.assertEqual(line1, '15 grams milk')
         self.assertEqual(line2, '4088 grams milk')
-        self.assertEqual(line3, 'grams milk')
+        self.assertEqual(line3, '0 grams milk')
 
 
 
