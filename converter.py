@@ -36,31 +36,47 @@ class ARConverter:
 
         components = self.break_line(line)
 
-        item = components['item']
         measure = components['measure']
-        amount = components['amount']
-        around_words = components['words']
-        fahrenheit = components['F']
 
-        if fahrenheit or amount > 250:
-            amount = self.fahrenheit_celsius(amount)
+        fahrenheit = components.get('F_word')
+        possible_fahrenheit = self.check_possible_fahrenheit(components)
+
+        if fahrenheit or possible_fahrenheit:
+            line = self.update_farenheits(line, components)
 
         if measure == 'cup':
-            result = self.convert_cups_grams(item, amount, around_words)
+            result = self.convert_cups_grams(line, components)
 
         elif measure == 'oz':
-            result = self.convert_oz_grams(item, amount, around_words)
+            result = self.convert_oz_grams(line, components)
 
         elif measure == 'lb':
-            result = self.convert_lb_grams(item, amount, around_words)
+            result = self.convert_lb_grams(line, components)
 
         elif measure in self.ml_measures.keys():
-            result = self.convert_ml_gr(item, amount, measure, around_words)
+            result = self.convert_ml_gr(line, components)
 
         else:
-            result = self.concatenate_result(amount, measure, item, *around_words)
+            result = line
 
         return result
+
+    def check_possible_fahrenheit(self, components):
+        """We could assume that amount in the line is temperature in Fahrengheit if there is no measures near by
+        and amount is more than 250 (it's pretty hot for Celsius and such a kind recipes are really rare)
+        """
+
+        is_amount = components.get('amount')
+        is_measure = components.get('measure')
+
+        if (not is_amount) or is_measure:
+            return False
+
+        elif components['amount'] > 250:
+            return True
+
+        return False
+
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
@@ -68,15 +84,15 @@ class ARConverter:
         result = {}
 
         amount = self.find_numbers(line)
-        result.update({'amount': amount})
+        result.update(amount)
 
-        words = self.find_words(line, amount)
+        words = self.find_words(line, amount['amount'])
         result.update(words)
 
         return result
 
     def find_words(self, line, amount):
-        result = {'measure': '', 'item': '', 'words': '', 'F': False}
+        result = {'measure': '', 'item': '', 'words': ''}
         words_to_delete = []
 
         words = re.findall(r'[A-Za-z]+', line)
@@ -87,33 +103,30 @@ class ARConverter:
                 if word.lower() in self.units[i]:
                     measure = self.units[i][0]
                     words_to_delete.append(word)
-                    result.update({'measure': measure})
+                    result.update({'measure': measure, 'old_measure': word})
                     break
 
             # Check if the word is an ingredient
             if word in self.coefficients:
                 result.update({'item': word})
-                # words_to_delete.append(word)
 
             # Check if we have to convert F to C
             if word.lower() in self.temperature_name and amount > 100:
                 words_to_delete.append(word)
-                result.update({'F': True})
-                words.append('celsius')
+                result.update({'F_word': word})
 
         for word in words_to_delete:
             words.remove(word)
 
         result.update({'words': words})
-
         return result
 
     def find_numbers(self, line):
         amount = re.findall(r'\d[\d /]+', line)
         if len(amount) > 0:
-            amount = self.str_to_int_convert_amount(amount[0])
-            return amount
-        return 0
+            convert_amount = self.str_to_int_convert_amount(amount[0])
+            return {'old_amount': amount[0], 'amount': convert_amount}
+        return {'amount': 0}
 
     def cups_grams(self, item, cups, words):
         """Try to convert item from cups to grams if it is in self.coefficients
@@ -127,7 +140,7 @@ class ARConverter:
             grams = self.calculate_grams_if_item(item, cups, words)
             return [grams, True]
         else:
-            print('INVALID PRODUCT: ', item)
+            print('INVALID PRODUCT: ', *words)
             return [cups, False]
 
     def calculate_grams_if_item(self, item, cups, words):
@@ -152,37 +165,51 @@ class ARConverter:
 
         return grams
 
+    def update_farenheits(self, line, components):
+        old_amount = components['amount']
+        amount = self.fahrenheit_celsius(old_amount)
+        result = line.replace(str(old_amount), str(amount))
+        is_F_word = components.get('F_word')
+        if is_F_word:
+            result = result.replace(components['F_word'], 'C')
+
+        return result
+
+
+
     # High-level conversion functions
 
-    def convert_cups_grams(self, item, amount, around_words, measure='cup'):
+    def convert_cups_grams(self, line, components):
         """Converts cups to grams and process result whether the conversion is succeed or failed"""
-
-        cups_to_grams = self.cups_grams(item, amount, around_words)
-
+        cups_to_grams = self.cups_grams(components['item'], components['amount'], components['words'])
         if cups_to_grams[1]:  # if conversion is success
-            result = self.concatenate_result(round(cups_to_grams[0]), 'grams', item, *around_words)
+            result = line.replace(components['old_amount'], str(round(cups_to_grams[0])) + ' ')
+            result = result.replace(components['old_measure'], 'grams')
+
         else:
-            result = self.concatenate_result(amount, measure, item, *around_words)
+            result = line
         return result
 
-    def convert_ml_gr(self, item, amount, measure, around_words):
+    def convert_ml_gr(self, line, components):
         """Calculates proportion for volume in self.ml_measures and converts cups to grams"""
 
-        cups_in_measure = self.ml_cups(measure)
-        amount = amount * cups_in_measure
-        result = self.convert_cups_grams(item, amount, around_words)
+        cups_in_measure = self.ml_cups(components['measure'])
+        components.update({'amount': components['amount']*cups_in_measure})
+        result = self.convert_cups_grams(line, components)
 
         return result
 
-    def convert_oz_grams(self, item, amount, around_words):
-        grams = self.oz_grams(amount)
-        result = self.concatenate_result(grams, 'grams', item, *around_words)
+    def convert_oz_grams(self, line, components):
+        grams = self.oz_grams(components['amount'])
+        result = line.replace(components['old_amount'], str(grams) + ' ')
+        result = result.replace(components['old_measure'], 'grams')
 
         return result
 
-    def convert_lb_grams(self, item, amount, around_words):
-        grams = self.lb_grams(amount)
-        result = self.concatenate_result(grams, 'grams', item, *around_words)
+    def convert_lb_grams(self, line, components):
+        grams = self.lb_grams(components['amount'])
+        result = line.replace(components['old_amount'], str(grams) + ' ')
+        result = result.replace(components['old_measure'], 'grams')
 
         return result
 
@@ -191,14 +218,8 @@ class ARConverter:
     def fahrenheit_celsius(self, temperature):
         return round((temperature - 32)*5/9)
 
-    def celsius_fahrenheit(self, temperature):
-        return round(temperature*9/5) + 32
-
     def oz_grams(self, weight):
         return round(weight*28.35)
-
-    def grams_oz(self, weight):
-        return round(weight/28.35)
 
     def lb_grams(self, weight):
         return round(weight*453.6)
@@ -233,10 +254,3 @@ class ARConverter:
             else:
                 result += int(string_number)
         return result
-
-    def concatenate_result(self, *args):
-        result = ''
-        for arg in args:
-            if arg not in ['', 0]:
-                result += str(arg) + ' '
-        return result.strip()
