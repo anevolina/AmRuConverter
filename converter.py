@@ -56,10 +56,15 @@ class ARConverter:
         elif measure in self.ml_measures.keys():
             result = self.convert_ml_gr(line, components)
 
+        elif components.get('old_measure'):
+            result = line.replace(components['old_measure'], components['measure'])
+            result = result.replace(components['old_amount'], str(components['amount']) + ' ')
+
         else:
             result = line
 
         return result
+
 
     def check_possible_fahrenheit(self, components):
         """We could assume that amount in the line is temperature in Fahrengheit if there is no measures near by
@@ -76,7 +81,6 @@ class ARConverter:
             return True
 
         return False
-
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
@@ -174,8 +178,6 @@ class ARConverter:
             result = result.replace(components['F_word'], 'C')
 
         return result
-
-
 
     # High-level conversion functions
 
