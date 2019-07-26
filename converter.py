@@ -27,7 +27,7 @@ class ARConverter:
         self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240}
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'pound', 'pounds'],
-                      ['grams', 'gr', 'gram'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon'], ['gallon', 'gallons'],
+                      ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
                       ['pint', 'pints'], ['quart', 'quarts']]
         self.temperature_name = ['f', 'fahrenheit', 'fahrenheits']
 
@@ -35,67 +35,56 @@ class ARConverter:
         """The main procedure, handles with lines and returns converted result"""
 
         components = self.break_line(line)
+        result = line
 
-        measure = components['measure']
+        if len(components['amount'].keys()) > 0:
+            for key in components['amount']:
+                sub_dict = self.get_sub_dict_for_amount(key, components)
 
-        fahrenheit = components.get('F_word')
-        possible_fahrenheit = self.check_possible_fahrenheit(components)
+                possible_fahrenheit = sub_dict.get('possible_F')
 
-        if fahrenheit or possible_fahrenheit:
-            line = self.update_farenheits(line, components)
+                if possible_fahrenheit:
+                    result = self.update_farenheits(line, sub_dict)
+                    continue
 
-        if measure == 'cup':
-            result = self.convert_cups_grams(line, components)
+                is_measure = sub_dict.get('measure')
 
-        elif measure == 'oz':
-            result = self.convert_oz_grams(line, components)
+                if is_measure:
+                    measure = sub_dict['measure']
 
-        elif measure == 'lb':
-            result = self.convert_lb_grams(line, components)
+                    if measure == 'cup':
+                        result = self.convert_cups_grams(line, sub_dict)
 
-        elif measure in self.ml_measures.keys():
-            result = self.convert_ml_gr(line, components)
+                    elif measure == 'oz':
+                        result = self.convert_oz_grams(line, sub_dict)
 
-        # elif components.get('old_measure'):
-        #     result = line.replace(components['old_measure'], components['measure'])
-        #     result = result.replace(components['old_amount'], str(components['amount']) + ' ')
+                    elif measure == 'lb':
+                        result = self.convert_lb_grams(line, sub_dict)
 
-        else:
-            result = line
+                    elif measure in self.ml_measures.keys():
+                        result = self.convert_ml_gr(line, sub_dict)
+
+                elif sub_dict.get('old_measure'):
+                    result = line.replace(sub_dict['old_measure'], sub_dict['measure'])
+                    # result = result.replace(sub_dict['old_amount'], str(sub_dict['amount']))
 
         return result
-
-    def check_possible_fahrenheit(self, components):
-        """We could assume that amount in the line is temperature in Fahrengheit if there is no measures near by
-        and amount is more than 250 (it's pretty hot for Celsius and such a kind recipes are really rare)
-        """
-
-        is_amount = components.get('amount')
-        is_measure = components.get('measure')
-
-        if (not is_amount) or is_measure:
-            return False
-
-        # elif components['amount'] > 250:
-        #     return True
-
-        return False
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
 
         result = {}
 
-        amount = self.find_numbers(line)
-        result.update(amount)
+        numbers = self.find_numbers(line)
+        result.update(numbers)
 
-        words = self.find_words(line, amount['amount'])
+        words = self.find_words(line)
         result.update(words)
 
         return result
 
-    def find_words(self, line, amount):
-        result = {'measure': '', 'item': '', 'words': ''}
+    def find_words(self, line):
+        result = {'item': '', 'words': ''}
 
         words = re.findall(r'[A-Za-z]+', line)
         for word in words:
@@ -104,49 +93,58 @@ class ARConverter:
             if word in self.coefficients:
                 result.update({'item': word})
 
-            # Check if we have to convert F to C
-            if word.lower() in self.temperature_name and amount > 100:
-                result.update({'F_word': word})
-
         result.update({'words': words})
         return result
 
     def find_numbers(self, line):
-        number_dic = {'amount': {}, 'measure': {}, 'old_measure': {}}
+        number_dic = {'amount': {}, 'measure': {}, 'old_measure': {}, 'F_word': {}, 'possible_F': {}}
 
-        amounts = re.findall(r'\d[\d /]+', line)
+        amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
+
         if len(amounts) > 0:
             for amount in amounts:
+                amount = amount.strip()
                 convert_amount = self.str_to_int_convert_amount(amount)
-                self.find_measures(line, amount, number_dic)
                 number_dic['amount'].update({amount: convert_amount})
-                print(number_dic)
+
+                if convert_amount > 250:
+                    number_dic['possible_F'].update({amount: True})
+                else:
+                    number_dic['possible_F'].update({amount: False})
+
+                self.look_around_number(line, amount, number_dic)
 
         return number_dic
 
-    def find_measures(self, line, amount, number_dic):
+    def look_around_number(self, line, amount, number_dic):
 
-        right_pattern = r'\b[a-zA-Z][^\s]*\b(?= ' + amount + ')'
-        left_pattern = r'(?<=' + amount + ')[a-zA-Z]*'
-        possible_measure_right = re.findall(right_pattern, line)
-        possible_measure_left = re.findall(left_pattern, line)
+        left_pattern = r'\b[a-zA-Z][^\s]*\b\s*(?=' + amount + ')'
+        right_pattern = r'(?<=' + amount + ')\\s*[a-zA-Z]*'
+        left_word = re.findall(left_pattern, line)
+        right_word = re.findall(right_pattern, line)
 
-        self.check_measure(possible_measure_right, amount, number_dic)
-        self.check_measure(possible_measure_left, amount, number_dic)
+        self.check_words_around_number(right_word, amount, number_dic)
+        self.check_words_around_number(left_word, amount, number_dic)
 
         return
 
-    def check_measure(self, possible_measures, amount, number_dic):
+    def check_words_around_number(self, words, amount, number_dic):
         # Check if a word is measure
 
-        for p_measure in possible_measures:
+        for word in words:
+            word = word.strip()
             for i in range(len(self.units)):
-                if p_measure.lower() in self.units[i]:
+                if word.lower() in self.units[i]:
                     measure = self.units[i][0]
                     number_dic['measure'].update({amount: measure})
-                    number_dic['old_measure'].update({amount: p_measure})
-        return
+                    number_dic['old_measure'].update({amount: word})
 
+        # Check if word is Fahrenheit word
+            if word.lower() in self.temperature_name:
+                number_dic['F_word'].update({amount: word})
+                number_dic['possible_F'].update({amount: True})
+
+        return
 
     def cups_grams(self, item, cups, words):
         """Try to convert item from cups to grams if it is in self.coefficients
@@ -185,13 +183,16 @@ class ARConverter:
 
         return grams
 
-    def update_farenheits(self, line, components):
-        old_amount = components['amount']
+    def update_farenheits(self, line, sub_dict):
+        old_amount = sub_dict['amount']
+
         amount = self.fahrenheit_celsius(old_amount)
         result = line.replace(str(old_amount), str(amount))
-        is_F_word = components.get('F_word')
+
+        is_F_word = sub_dict.get('F_word')
+
         if is_F_word:
-            result = result.replace(components['F_word'], 'C')
+            result = result.replace(sub_dict['F_word'], 'C')
 
         return result
 
@@ -199,6 +200,7 @@ class ARConverter:
 
     def convert_cups_grams(self, line, components):
         """Converts cups to grams and process result whether the conversion is succeed or failed"""
+
         cups_to_grams = self.cups_grams(components['item'], components['amount'], components['words'])
         if cups_to_grams[1]:  # if conversion is success
             result = line.replace(components['old_amount'], str(round(cups_to_grams[0])) + ' ')
@@ -219,14 +221,15 @@ class ARConverter:
 
     def convert_oz_grams(self, line, components):
         grams = self.oz_grams(components['amount'])
-        result = line.replace(components['old_amount'], str(grams) + ' ')
+        result = line.replace(components['old_amount'], str(grams))
         result = result.replace(components['old_measure'], 'grams')
 
         return result
 
     def convert_lb_grams(self, line, components):
-        grams = self.lb_grams(components['amount'])
-        result = line.replace(components['old_amount'], str(grams) + ' ')
+        old_amount = components['amount']
+        grams = self.lb_grams(old_amount)
+        result = line.replace(str(components['old_amount']), str(grams))
         result = result.replace(components['old_measure'], 'grams')
 
         return result
@@ -256,19 +259,44 @@ class ARConverter:
         If fraction part is incomplete ( /8) or (8/ ) it's ignored
 
         If some integer appears after fraction it's ignored
+        If integer appears after integer - first integer ignored (in a case '1 16 oz can')
         '''
+
 
         string_numbers = amount.split()
         result = 0
-        for string_number in string_numbers:
-            if '/' in string_number:
-                fraction_numbers = string_number.split('/')
+
+        for i in range(len(string_numbers)):
+            if '/' in string_numbers[i]:
+                fraction_numbers = string_numbers[i].split('/')
                 try:
                     result += round(int(fraction_numbers[0])/int(fraction_numbers[1]), 2)
                     return result
                 except:
-                    print('Error in fraction', string_number)
+                    print('Error in fraction', string_numbers[i])
                     pass
+            elif i > 0:
+                result = int(string_numbers[i])
+
+            elif ',' in string_numbers[i] or '.' in string_numbers[i]:
+                string_numbers[i] = string_numbers[i].replace(',', '.')
+                result += float(string_numbers[i])
+
             else:
-                result += int(string_number)
+                result += int(string_numbers[i])
         return result
+
+    def get_sub_dict_for_amount(self, amount, whole_dict):
+        result = {}
+        for key in whole_dict:
+            try:
+                am_in_keys = whole_dict[key].get(amount)
+                if am_in_keys:
+                    result.update({'old_amount': amount})
+                    result.update({key: whole_dict[key][amount]})
+            except AttributeError:
+                result.update({key: whole_dict[key]})
+
+        return result
+
+
