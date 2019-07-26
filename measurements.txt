@@ -77,3 +77,4 @@ Cream, 240
 Sour cream, 230
 Yogurt, 230
 oil, 216
+juice, 240
