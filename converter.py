@@ -56,15 +56,14 @@ class ARConverter:
         elif measure in self.ml_measures.keys():
             result = self.convert_ml_gr(line, components)
 
-        elif components.get('old_measure'):
-            result = line.replace(components['old_measure'], components['measure'])
-            result = result.replace(components['old_amount'], str(components['amount']) + ' ')
+        # elif components.get('old_measure'):
+        #     result = line.replace(components['old_measure'], components['measure'])
+        #     result = result.replace(components['old_amount'], str(components['amount']) + ' ')
 
         else:
             result = line
 
         return result
-
 
     def check_possible_fahrenheit(self, components):
         """We could assume that amount in the line is temperature in Fahrengheit if there is no measures near by
@@ -77,8 +76,8 @@ class ARConverter:
         if (not is_amount) or is_measure:
             return False
 
-        elif components['amount'] > 250:
-            return True
+        # elif components['amount'] > 250:
+        #     return True
 
         return False
 
@@ -97,18 +96,9 @@ class ARConverter:
 
     def find_words(self, line, amount):
         result = {'measure': '', 'item': '', 'words': ''}
-        words_to_delete = []
 
         words = re.findall(r'[A-Za-z]+', line)
         for word in words:
-
-            # Check if a word is measure
-            for i in range(len(self.units)):
-                if word.lower() in self.units[i]:
-                    measure = self.units[i][0]
-                    words_to_delete.append(word)
-                    result.update({'measure': measure, 'old_measure': word})
-                    break
 
             # Check if the word is an ingredient
             if word in self.coefficients:
@@ -116,21 +106,47 @@ class ARConverter:
 
             # Check if we have to convert F to C
             if word.lower() in self.temperature_name and amount > 100:
-                words_to_delete.append(word)
                 result.update({'F_word': word})
-
-        for word in words_to_delete:
-            words.remove(word)
 
         result.update({'words': words})
         return result
 
     def find_numbers(self, line):
-        amount = re.findall(r'\d[\d /]+', line)
-        if len(amount) > 0:
-            convert_amount = self.str_to_int_convert_amount(amount[0])
-            return {'old_amount': amount[0], 'amount': convert_amount}
-        return {'amount': 0}
+        number_dic = {'amount': {}, 'measure': {}, 'old_measure': {}}
+
+        amounts = re.findall(r'\d[\d /]+', line)
+        if len(amounts) > 0:
+            for amount in amounts:
+                convert_amount = self.str_to_int_convert_amount(amount)
+                self.find_measures(line, amount, number_dic)
+                number_dic['amount'].update({amount: convert_amount})
+                print(number_dic)
+
+        return number_dic
+
+    def find_measures(self, line, amount, number_dic):
+
+        right_pattern = r'\b[a-zA-Z][^\s]*\b(?= ' + amount + ')'
+        left_pattern = r'(?<=' + amount + ')[a-zA-Z]*'
+        possible_measure_right = re.findall(right_pattern, line)
+        possible_measure_left = re.findall(left_pattern, line)
+
+        self.check_measure(possible_measure_right, amount, number_dic)
+        self.check_measure(possible_measure_left, amount, number_dic)
+
+        return
+
+    def check_measure(self, possible_measures, amount, number_dic):
+        # Check if a word is measure
+
+        for p_measure in possible_measures:
+            for i in range(len(self.units)):
+                if p_measure.lower() in self.units[i]:
+                    measure = self.units[i][0]
+                    number_dic['measure'].update({amount: measure})
+                    number_dic['old_measure'].update({amount: p_measure})
+        return
+
 
     def cups_grams(self, item, cups, words):
         """Try to convert item from cups to grams if it is in self.coefficients
