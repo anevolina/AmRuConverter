@@ -34,13 +34,14 @@ class ARConverter:
     def process_line(self, line):
         """The main procedure, handles with lines and returns converted result"""
 
+        line = self.delete_incorrect_symbols(line)
+
         components = self.break_line(line)
         result = line
 
         if len(components['amount'].keys()) > 0:
             for key in components['amount']:
                 sub_dict = self.get_sub_dict_for_amount(key, components)
-
                 possible_fahrenheit = sub_dict.get('possible_F')
 
                 if possible_fahrenheit:
@@ -64,11 +65,18 @@ class ARConverter:
                     elif measure in self.ml_measures.keys():
                         result = self.convert_ml_gr(line, sub_dict)
 
-                elif sub_dict.get('old_measure'):
-                    result = line.replace(sub_dict['old_measure'], sub_dict['measure'])
-                    # result = result.replace(sub_dict['old_amount'], str(sub_dict['amount']))
+                    elif sub_dict.get('old_measure'):
 
+                        result = line.replace(sub_dict['old_measure'], sub_dict['measure'])
+                        result = result.replace(sub_dict['old_amount'], str(sub_dict['amount']))
         return result
+
+    def delete_incorrect_symbols(self, line):
+        symbols_to_replace = {'½': '1/2', '¼': '1/4', '¾': '3/4', '°': ''}
+        for key, value in symbols_to_replace.items():
+            line = line.replace(key, value)
+        return line
+
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
@@ -84,6 +92,8 @@ class ARConverter:
         return result
 
     def find_words(self, line):
+        """"Find all words in a line, and check if there is an item"""
+
         result = {'item': '', 'words': ''}
 
         words = re.findall(r'[A-Za-z]+', line)
@@ -97,6 +107,8 @@ class ARConverter:
         return result
 
     def find_numbers(self, line):
+        """Find all numbers in a line and check words around them"""
+
         number_dic = {'amount': {}, 'measure': {}, 'old_measure': {}, 'F_word': {}, 'possible_F': {}}
 
         amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
@@ -117,6 +129,7 @@ class ARConverter:
         return number_dic
 
     def look_around_number(self, line, amount, number_dic):
+        """Find words around number and check them further"""
 
         left_pattern = r'\b[a-zA-Z][^\s]*\b\s*(?=' + amount + ')'
         right_pattern = r'(?<=' + amount + ')\\s*[a-zA-Z]*'
@@ -125,10 +138,11 @@ class ARConverter:
 
         self.check_words_around_number(right_word, amount, number_dic)
         self.check_words_around_number(left_word, amount, number_dic)
-
         return
 
     def check_words_around_number(self, words, amount, number_dic):
+        """Check whether words around number are measure or Fahrenheit words"""
+
         # Check if a word is measure
 
         for word in words:
@@ -200,10 +214,9 @@ class ARConverter:
 
     def convert_cups_grams(self, line, components):
         """Converts cups to grams and process result whether the conversion is succeed or failed"""
-
         cups_to_grams = self.cups_grams(components['item'], components['amount'], components['words'])
         if cups_to_grams[1]:  # if conversion is success
-            result = line.replace(components['old_amount'], str(round(cups_to_grams[0])) + ' ')
+            result = line.replace(components['old_amount'], str(round(cups_to_grams[0])))
             result = result.replace(components['old_measure'], 'grams')
 
         else:
@@ -291,9 +304,10 @@ class ARConverter:
         for key in whole_dict:
             try:
                 am_in_keys = whole_dict[key].get(amount)
-                if am_in_keys:
+                if am_in_keys != None:
                     result.update({'old_amount': amount})
                     result.update({key: whole_dict[key][amount]})
+
             except AttributeError:
                 result.update({key: whole_dict[key]})
 
