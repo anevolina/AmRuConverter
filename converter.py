@@ -32,46 +32,60 @@ class ARConverter:
         self.temperature_name = ['f', 'fahrenheit', 'fahrenheits']
 
     def process_line(self, line):
-        """The main procedure, handles with lines and returns converted result"""
+        """The main procedure - delete incorrect symbols, process the line, replace all measurements and
+        returns converted result"""
 
         line = self.delete_incorrect_symbols(line)
 
         components = self.break_line(line)
+
         result = line
 
         if len(components['amount'].keys()) > 0:
             for key in components['amount']:
-                sub_dict = self.get_sub_dict_for_amount(key, components)
-                possible_fahrenheit = sub_dict.get('possible_F')
+                result = self.replace_in_line(line, key, components)
 
-                if possible_fahrenheit:
-                    result = self.update_farenheits(line, sub_dict)
-                    continue
+        return result
 
-                is_measure = sub_dict.get('measure')
+    def replace_in_line(self, line, amount, components):
+        """Replaces amounts and measures in line"""
 
-                if is_measure:
-                    measure = sub_dict['measure']
+        result = line
 
-                    if measure == 'cup':
-                        result = self.convert_cups_grams(line, sub_dict)
+        sub_dict = self.get_sub_dict_for_amount(amount, components)
+        possible_fahrenheit = sub_dict.get('possible_F')
 
-                    elif measure == 'oz':
-                        result = self.convert_oz_grams(line, sub_dict)
+        if possible_fahrenheit:
+            result = self.update_farenheits(line, sub_dict)
+            return result
 
-                    elif measure == 'lb':
-                        result = self.convert_lb_grams(line, sub_dict)
+        is_measure = sub_dict.get('measure')
 
-                    elif measure in self.ml_measures.keys():
-                        result = self.convert_ml_gr(line, sub_dict)
+        if is_measure:
+            measure = sub_dict['measure']
 
-                    elif sub_dict.get('old_measure'):
+            if measure == 'cup':
+                result = self.convert_cups_grams(line, sub_dict)
 
-                        result = line.replace(sub_dict['old_measure'], sub_dict['measure'])
-                        result = result.replace(sub_dict['old_amount'], str(sub_dict['amount']))
+            elif measure == 'oz':
+                result = self.convert_oz_grams(line, sub_dict)
+
+            elif measure == 'lb':
+                result = self.convert_lb_grams(line, sub_dict)
+
+            elif measure in self.ml_measures.keys():
+                result = self.convert_ml_gr(line, sub_dict)
+
+            elif sub_dict.get('old_measure'):
+
+                result = line.replace(sub_dict['old_measure'], sub_dict['measure'])
+                result = result.replace(sub_dict['old_amount'], str(sub_dict['amount']))
+
         return result
 
     def delete_incorrect_symbols(self, line):
+        """Replace or delete special symbols from line. Such as ½ or °"""
+
         symbols_to_replace = {'½': '1/2', '¼': '1/4', '¾': '3/4', '°': ''}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, value)
@@ -83,7 +97,7 @@ class ARConverter:
 
         result = {}
 
-        numbers = self.find_numbers(line)
+        numbers = self.find_and_check_numbers(line)
         result.update(numbers)
 
         words = self.find_words(line)
@@ -106,17 +120,20 @@ class ARConverter:
         result.update({'words': words})
         return result
 
-    def find_numbers(self, line):
+    def find_and_check_numbers(self, line):
         """Find all numbers in a line and check words around them"""
 
         number_dic = {'amount': {}, 'measure': {}, 'old_measure': {}, 'F_word': {}, 'possible_F': {}}
 
-        amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
+        amounts = self.find_numbers(line)
 
         if len(amounts) > 0:
             for amount in amounts:
+            
                 amount = amount.strip()
+
                 convert_amount = self.str_to_int_convert_amount(amount)
+
                 number_dic['amount'].update({amount: convert_amount})
 
                 if convert_amount > 250:
@@ -128,6 +145,13 @@ class ARConverter:
 
         return number_dic
 
+    def find_numbers(self, line):
+        """Find numbers using regexp"""
+
+        amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
+
+        return amounts
+
     def look_around_number(self, line, amount, number_dic):
         """Find words around number and check them further"""
 
@@ -138,7 +162,8 @@ class ARConverter:
 
         self.check_words_around_number(right_word, amount, number_dic)
         self.check_words_around_number(left_word, amount, number_dic)
-        return
+
+        return left_word + right_word
 
     def check_words_around_number(self, words, amount, number_dic):
         """Check whether words around number are measure or Fahrenheit words"""
@@ -198,6 +223,8 @@ class ARConverter:
         return grams
 
     def update_farenheits(self, line, sub_dict):
+        """Convert amount from F to C and replace Fahrenheit word in the line"""
+
         old_amount = sub_dict['amount']
 
         amount = self.fahrenheit_celsius(old_amount)
@@ -214,6 +241,7 @@ class ARConverter:
 
     def convert_cups_grams(self, line, components):
         """Converts cups to grams and process result whether the conversion is succeed or failed"""
+
         cups_to_grams = self.cups_grams(components['item'], components['amount'], components['words'])
         if cups_to_grams[1]:  # if conversion is success
             result = line.replace(components['old_amount'], str(round(cups_to_grams[0])))
@@ -233,6 +261,8 @@ class ARConverter:
         return result
 
     def convert_oz_grams(self, line, components):
+        """Convert oz to grams and replace it in the line"""
+
         grams = self.oz_grams(components['amount'])
         result = line.replace(components['old_amount'], str(grams))
         result = result.replace(components['old_measure'], 'grams')
@@ -240,6 +270,8 @@ class ARConverter:
         return result
 
     def convert_lb_grams(self, line, components):
+        """Convert lb to grams and replace it in the line"""
+
         old_amount = components['amount']
         grams = self.lb_grams(old_amount)
         result = line.replace(str(components['old_amount']), str(grams))
@@ -300,6 +332,14 @@ class ARConverter:
         return result
 
     def get_sub_dict_for_amount(self, amount, whole_dict):
+        """Extract sub dictionary for the particular amount as a key value in all sub dictionaries
+        For example, we have such a dictionary {'amount': {'1 1/2': 1.5, '350': 350}, 'measure': {'1 1/2': 'cup'},
+                                                                                        'F_word':{'350': 'F'}}
+        for amount = '1 1/2' this function extract dictionary {'old_amount': '1 1/2', 'amount': 1.5, 'measure': 'cup'}
+        for amount = '350' it should be {'old_amount': 350, 'amount': 350, 'F_word': 'F'}
+
+        """
+
         result = {}
         for key in whole_dict:
             try:
