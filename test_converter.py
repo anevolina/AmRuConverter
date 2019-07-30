@@ -104,8 +104,8 @@ class TestTemperatureConvert(unittest.TestCase):
         self.assertEqual(words3, ['lb ', ''])
 
     def test_update_farenheits(self):
-        line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', {'amount': 350, 'F_word': 'F'})
-        line2 = self.my_converter.update_farenheits('Preheat oven till 250', {'amount': 250})
+        line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', {'amount': 350, 'F_word': 'F'}, (18, 21))
+        line2 = self.my_converter.update_farenheits('Preheat oven till 250', {'amount': 250}, (18, 21))
 
         self.assertEqual(line1, 'Preheat oven till 177 C')
         self.assertEqual(line2, 'Preheat oven till 121')
