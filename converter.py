@@ -84,6 +84,7 @@ class ARConverter:
 
     def delete_incorrect_symbols(self, line):
         """Replace or delete special symbols from line. Such as ½ or °"""
+
         symbols_to_replace = {'½': '1/2', '¼': '1/4', '¾': '3/4', '°': ''}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, value, 1)
@@ -112,8 +113,8 @@ class ARConverter:
         for word in words:
 
             # Check if the word is an ingredient
-            if word in self.coefficients:
-                result.update({'item': word})
+            if word.lower() in self.coefficients:
+                result.update({'item': word.lower()})
 
         result.update({'words': words})
         return result
@@ -216,8 +217,6 @@ class ARConverter:
         right_pattern = r'(?<=' + amount + ')\\s*[a-zA-Z]*'
         left_word = re.findall(left_pattern, line)
         right_word = re.findall(right_pattern, line)
-
-        # self.delete_symbols_from_look_around(right_word)
 
         self.check_words_around_number(right_word, amount, number_dict)
         self.check_words_around_number(left_word, amount, number_dict)
