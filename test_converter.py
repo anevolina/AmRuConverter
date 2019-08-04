@@ -99,9 +99,9 @@ class TestTemperatureConvert(unittest.TestCase):
         words2 = self.my_converter.look_around_number('butter 1 lb', '1', self.number_dict)
         words3 = self.my_converter.look_around_number('sugar lb 10', '10', self.number_dict)
 
-        self.assertEqual(words1, [' oz'])
-        self.assertEqual(words2, ['butter ', ' lb'])
-        self.assertEqual(words3, ['lb ', ''])
+        self.assertEqual(words1, ['oz'])
+        self.assertEqual(words2, ['butter', 'lb'])
+        self.assertEqual(words3, ['lb', ''])
 
     def test_update_farenheits(self):
         line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', {'amount': 350, 'F_word': 'F'}, (18, 21))
