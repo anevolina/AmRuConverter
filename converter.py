@@ -48,17 +48,21 @@ class ARConverter:
     def replace_in_line(self, line, amount, components):
         """Replaces amounts and measures in line"""
 
+
         result = line
 
         sub_dict = self.get_sub_dict_for_amount(amount, components)
         index = sub_dict['index']
         possible_fahrenheit = sub_dict.get('possible_F')
+        measure = sub_dict.get('measure')
 
-        if possible_fahrenheit:
+        if possible_fahrenheit and not measure:
             result = self.update_farenheits(result, sub_dict, index)
             return result
 
-        measure = sub_dict.get('measure')
+
+
+
 
         if measure:
 
@@ -80,6 +84,8 @@ class ARConverter:
                 result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *index)
 
         self.update_index_after_replace(amount, components, sub_dict)
+
+
         return result
 
     def delete_incorrect_symbols(self, line):
@@ -152,7 +158,6 @@ class ARConverter:
 
     def handle_double_amount(self, line, number_dict):
 
-        # amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
         amounts = self.find_numbers(line)
 
         full_amount = None
@@ -161,7 +166,7 @@ class ARConverter:
             convert_amount = self.str_to_int_convert_amount(amount)
 
             number_dict['amount'].update({amount: convert_amount})
-            # number_dict['old_amount'].update({amount: amount})
+
             self.find_position(amount, line, number_dict)
 
             self.check_possible_fahrenheit(amount, convert_amount, number_dict)
@@ -175,11 +180,14 @@ class ARConverter:
 
         return
 
-    def find_position(self, amount, line, number_dict):
-        pre_positions = re.finditer(amount, line)
+    def find_position(self, word, line, number_dict, template=''):
+        if template == '':
+            template = word
+
+        pre_positions = re.finditer(template, line)
         positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
 
-        number_dict['index'].update({amount: positions[0]})
+        number_dict['index'].update({word: positions[0]})
 
         return
 
@@ -194,11 +202,12 @@ class ARConverter:
 
     def find_double_numbers(self, line):
         """Find numbers which go in pairs ex: '4 to 5 cups of flour' """
+        amounts = []
+        n_p = '\d'
 
-        n_p = '\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+'
         split_words = ['to', '-']
         for s_word in split_words:
-            amounts = re.findall(r'{}\s*{}\s*{}'.format(n_p, s_word, n_p), line)
+            amounts += re.findall(r'{}\s*{}\s*{}'.format(n_p, s_word, n_p), line)
 
         return amounts
 
@@ -212,16 +221,44 @@ class ARConverter:
     def look_around_number(self, line, amount, number_dict):
         """Find words around number and check them further"""
 
+        p_s = ['', '-']
 
-        left_pattern = r'\b[a-zA-Z][^\s]*\b\s*(?=' + amount + ')'
-        right_pattern = r'(?<=' + amount + ')\\s*[a-zA-Z]*'
-        left_word = re.findall(left_pattern, line)
-        right_word = re.findall(right_pattern, line)
+        left_words = []
+        right_words = []
 
-        self.check_words_around_number(right_word, amount, number_dict)
-        self.check_words_around_number(left_word, amount, number_dict)
+        for symbol in p_s:
 
-        return left_word + right_word
+            left_pattern = r'\b[a-zA-Z][^\s]*\b[ {}]*(?=' + amount + ')'.format(symbol)
+            # right_pattern = r'(?<=' + amount + ')[ {}]*[a-zA-Z]*'.format(symbol)
+            right_pattern = r'(?<!\d)' + amount + '[ {}]*([a-zA-Z]+)'.format(symbol)
+
+            left_word = re.findall(left_pattern, line)
+            right_word = re.findall(right_pattern, line)
+
+            # print(right_word, left_word)
+            left_words += left_word
+            right_words += right_word
+
+        words = self.process_words_around_number(left_words + right_words, p_s)
+
+        self.check_words_around_number(words, amount, number_dict)
+
+        return words
+
+    def process_words_around_number(self, words: list, symbols_for_delete: list):
+        """Delete all excess symbols from words"""
+
+        result = []
+        for word in words:
+            for symbol in symbols_for_delete:
+                word = word.replace(symbol, '')
+
+            word = word.strip()
+            if word not in result:
+                result.append(word)
+
+
+        return result
 
 
     def check_words_around_number(self, words, amount, number_dict):
