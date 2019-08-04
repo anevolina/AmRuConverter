@@ -78,3 +78,10 @@ Sour cream, 230
 Yogurt, 230
 oil, 216
 juice, 240
+stock, 240
+Banana, 300
+Bananas, 300
+Banana puree, 300
+Banana mashed, 300
+Bananas puree, 300
+Bananas mashed, 300
