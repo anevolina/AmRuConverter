@@ -30,7 +30,8 @@ my_translator = Translator(service_urls=[
 
 # define reaction to /start command in tlgr
 def start_callback(bot, update):
-    update.message.reply_text('Введи сообщение')
+    update.message.reply_text("""Высылай рецепт!\nЯ переведу его из американской системы счисления в граммы.\
+    Чашки масла, муки и сахара, унции, фунты, кварты и галлоны - в граммы для быстрого измерения на кухонных весах.""")
 
 def am_ru_convert(bot, update):
     text = update.message.text.split('\n')
