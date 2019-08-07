@@ -24,11 +24,11 @@ class ARConverter:
         with open('coefficients.json', 'r') as coefficients:
             self.coefficients = json.load(coefficients)
 
-        self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240}
+        self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240, 'stick': 120}
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'pound', 'pounds'],
                       ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
-                      ['pint', 'pints'], ['quart', 'quarts']]
+                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks']]
         self.temperature_name = ['f', 'fahrenheit', 'fahrenheits']
 
     def process_line(self, line):
@@ -47,7 +47,6 @@ class ARConverter:
 
     def replace_in_line(self, line, amount, components):
         """Replaces amounts and measures in line"""
-
 
         result = line
 
@@ -74,6 +73,7 @@ class ARConverter:
                 result = self.convert_lb_grams(line, sub_dict, all_indexes)
 
             elif measure in self.ml_measures.keys():
+
                 result = self.convert_ml_gr(line, sub_dict, all_indexes)
 
             elif sub_dict.get('old_measure'):
@@ -94,7 +94,6 @@ class ARConverter:
         for key, value in symbols_to_replace.items():
             line = line.replace(key, ' ' + value, 1).strip()
         return line
-
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
@@ -161,12 +160,10 @@ class ARConverter:
     def handle_double_amount(self, line, number_dict):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
 
-
         amounts = self.find_numbers(line)
 
-        full_amount = None
-
         for amount in amounts:
+
             convert_amount = self.str_to_int_convert_amount(amount)
 
             number_dict['amount'].update({amount: convert_amount})
@@ -177,10 +174,7 @@ class ARConverter:
             self.look_around_number(line, amount, number_dict)
 
             if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
-                full_amount = amount
-
-        if full_amount:
-            self.copy_sub_dict(full_amount, number_dict)
+                self.copy_sub_dict(amount, number_dict)
 
         return
 
@@ -269,7 +263,6 @@ class ARConverter:
 
 
         return result
-
 
     def check_words_around_number(self, words, amount, number_dict, line):
         """Check whether words around number are measure or Fahrenheit words"""
@@ -370,7 +363,7 @@ class ARConverter:
             index_m = self.get_new_index(old_amount, new_amount, index_m)
 
             result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
-            self.update_all_indexes_after_replacement('grams', sub_dict['old_measure'], all_indexes)
+            self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
 
@@ -519,10 +512,15 @@ class ARConverter:
 
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
         """Updates all indexes for a line"""
+        keys = [key for key in all_indexes]
+        key_index = keys.index(old)
 
-        for key, value in all_indexes.items():
+        for i in range(key_index, len(keys)):
+            key = keys[i]
+            value = all_indexes.get(key)
             new_index = self.get_new_index(old, new, value)
             all_indexes.update({key: new_index})
+
 
         pass
 
