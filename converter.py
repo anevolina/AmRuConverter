@@ -52,54 +52,52 @@ class ARConverter:
         result = line
 
         sub_dict = self.get_sub_dict_for_amount(amount, components)
-        index = sub_dict['index']
+        amount_index = sub_dict.get('index')
+        measure_index = sub_dict.get('index_m')
+        all_indexes = components.get('index')
         possible_fahrenheit = sub_dict.get('possible_F')
         measure = sub_dict.get('measure')
 
         if possible_fahrenheit and not measure:
-            result = self.update_farenheits(result, sub_dict, index)
+            result = self.update_farenheits(result, sub_dict, all_indexes)
             return result
-
-
-
-
 
         if measure:
 
             if measure == 'cup':
-                result = self.convert_cups_grams(line, sub_dict, index)
+                result = self.convert_cups_grams(line, sub_dict, all_indexes)
 
             elif measure == 'oz':
-                result = self.convert_oz_grams(line, sub_dict, index)
+                result = self.convert_oz_grams(line, sub_dict, all_indexes)
 
             elif measure == 'lb':
-                result = self.convert_lb_grams(line, sub_dict, index)
+                result = self.convert_lb_grams(line, sub_dict, all_indexes)
 
             elif measure in self.ml_measures.keys():
-                result = self.convert_ml_gr(line, sub_dict, index)
+                result = self.convert_ml_gr(line, sub_dict, all_indexes)
 
             elif sub_dict.get('old_measure'):
 
-                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'])
-                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *index)
+                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
+                self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
+                amount_index = self.get_new_index(sub_dict['old_measure'], sub_dict['measure'], amount_index)
 
-        self.update_index_after_replace(amount, components, sub_dict)
-
+                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *amount_index)
+                self.update_all_indexes_after_replacement(sub_dict['old_amount'], sub_dict['amount'], all_indexes)
 
         return result
 
     def delete_incorrect_symbols(self, line):
         """Replace or delete special symbols from line. Such as ½ or °"""
 
-        symbols_to_replace = {'½': '1/2', '¼': '1/4', '¾': '3/4', '°': ''}
+        symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': ''}
         for key, value in symbols_to_replace.items():
-            line = line.replace(key, value, 1)
+            line = line.replace(key, ' ' + value, 1).strip()
         return line
 
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
-
         result = {}
 
         numbers = self.find_and_check_numbers(line)
@@ -153,6 +151,7 @@ class ARConverter:
 
                 self.check_possible_fahrenheit(amount, convert_amount, number_dict)
                 self.look_around_number(line, amount, number_dict)
+
 
         return
 
@@ -235,13 +234,12 @@ class ARConverter:
             left_word = re.findall(left_pattern, line)
             right_word = re.findall(right_pattern, line)
 
-            # print(right_word, left_word)
             left_words += left_word
             right_words += right_word
 
         words = self.process_words_around_number(left_words + right_words, p_s)
 
-        self.check_words_around_number(words, amount, number_dict)
+        self.check_words_around_number(words, amount, number_dict, line)
 
         return words
 
@@ -261,7 +259,7 @@ class ARConverter:
         return result
 
 
-    def check_words_around_number(self, words, amount, number_dict):
+    def check_words_around_number(self, words, amount, number_dict, line):
         """Check whether words around number are measure or Fahrenheit words"""
 
         # Check if a word is measure
@@ -273,6 +271,9 @@ class ARConverter:
                     measure = self.units[i][0]
                     number_dict['measure'].update({amount: measure})
                     number_dict['old_measure'].update({amount: word})
+                    template = r'[ \d]{}[ \d]*|[ \d]*{}[ \d]'.format(word, word)
+                    self.find_position(word, line, number_dict, template)
+
 
         # Check if word is Fahrenheit word
             if word.lower() in self.temperature_name:
@@ -318,67 +319,92 @@ class ARConverter:
 
         return grams
 
-    def update_farenheits(self, line, sub_dict, index: tuple):
+    def update_farenheits(self, line, sub_dict, all_indexes):
         """Convert amount from F to C and replace Fahrenheit word in the line"""
 
         old_amount = sub_dict['amount']
+        index = sub_dict['index']
 
         amount = self.fahrenheit_celsius(old_amount)
         result = self.replace_words(line, str(old_amount), str(amount), *index)
 
-        is_F_word = sub_dict.get('F_word')
+        self.update_all_indexes_after_replacement(old_amount, amount, all_indexes)
 
-        if is_F_word:
-            result = result.replace(sub_dict['F_word'], 'C')
+        F_word = sub_dict.get('F_word')
+
+        if F_word:
+            result = result.replace(F_word, 'C')
+            self.update_all_indexes_after_replacement(F_word, 'C', all_indexes)
+
         return result
 
     # High-level conversion functions
 
-    def convert_cups_grams(self, line, sub_dict, index: tuple):
+    def convert_cups_grams(self, line, sub_dict, all_indexes):
         """Converts cups to grams and process result whether the conversion is succeed or failed"""
 
         result = line
+        index = sub_dict['index']
+        index_m = sub_dict['index_m']
+
+        old_amount = sub_dict['old_amount']
+
         cups_to_grams = self.cups_grams(sub_dict['item'], sub_dict['amount'], sub_dict['words'])
+        new_amount = str(round(cups_to_grams[0]))
 
         if cups_to_grams[1]:  # if conversion is success
-            result = self.replace_words(result, sub_dict['old_amount'], str(round(cups_to_grams[0])), *index)
-            result = self.replace_words(result, sub_dict['old_measure'], 'grams')
+            result = self.replace_words(result, old_amount, new_amount, *index)
+            self.update_all_indexes_after_replacement(old_amount, new_amount, all_indexes)
+            index_m = self.get_new_index(old_amount, new_amount, index_m)
 
-            sub_dict.update({'amount': round(cups_to_grams[0])})
+            result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+            self.update_all_indexes_after_replacement('grams', sub_dict['old_measure'], all_indexes)
 
         return result
 
-    def convert_ml_gr(self, line, sub_dict, index: tuple):
+    def convert_ml_gr(self, line, sub_dict, all_indexes):
         """Calculates proportion for volume in self.ml_measures and converts cups to grams"""
 
         cups_in_measure = self.ml_cups(sub_dict['measure'])
         cups = sub_dict['amount']*cups_in_measure
         sub_dict.update({'amount': cups})
 
-        result = self.convert_cups_grams(line, sub_dict, index)
+        result = self.convert_cups_grams(line, sub_dict, all_indexes)
 
         return result
 
-    def convert_oz_grams(self, line, sub_dict, index: tuple):
+    def convert_oz_grams(self, line, sub_dict, all_indexes):
         """Convert oz to grams and replace it in the line"""
+
+        index = sub_dict.get('index')
+        index_m = sub_dict.get('index_m')
 
         grams = self.oz_grams(sub_dict['amount'])
         result = self.replace_words(line, sub_dict['old_amount'], str(grams), *index)
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams')
+        self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
+        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        sub_dict.update({'amount': grams})
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
 
-    def convert_lb_grams(self, line, sub_dict, index: tuple):
+    def convert_lb_grams(self, line, sub_dict, all_indexes):
         """Convert lb to grams and replace it in the line"""
 
         old_amount = sub_dict['amount']
+        index = sub_dict.get('index')
+        index_m = sub_dict.get('index_m')
+
         grams = self.lb_grams(old_amount)
         result = self.replace_words(line, str(sub_dict['old_amount']), str(grams), *index)
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams')
+        self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
+        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        sub_dict.update({'amount': grams})
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
+
+        # sub_dict.update({'amount': grams})
 
         return result
 
@@ -450,6 +476,9 @@ class ARConverter:
                 if am_in_keys != None:
                     result.update({'old_amount': amount})
                     result.update({key: whole_dict[key][amount]})
+                    measure = whole_dict['old_measure'].get(amount)
+                    if measure:
+                        result.update({'index_m': whole_dict['index'].get(measure)})
 
             except AttributeError:
                 result.update({key: whole_dict[key]})
@@ -472,20 +501,37 @@ class ARConverter:
 
         return result
 
-    def update_index_after_replace(self, amount, components, sub_dict):
+    """
+    def update_all_indexes_after_replacement(self, amount, components, sub_dict):
+
         amounts = [key for key in components['amount'].keys()]
         amount_index = amounts.index(str(amount))
 
-        old_amount_len = len(sub_dict['old_amount'])
-        new_amount_len = len(str(sub_dict['amount']))
+        old_value_len = len(sub_dict['old_amount'])
+        new_value_len = len(str(sub_dict['amount']))
 
         if amount_index < len(amounts)-1:
             for key in amounts[amount_index+1::]:
                 old_index = components['index'].get(key)
-                new_index_start = old_index[0] - old_amount_len + new_amount_len
-                new_index_end = old_index[1] - old_amount_len + new_amount_len
+                new_index_start = old_index[0] - old_value_len + new_value_len
+                new_index_end = old_index[1] - old_value_len + new_value_len
                 new_index = (new_index_start, new_index_end)
                 components['index'].update({key: new_index})
+                # print(key, components)
+
+        pass """
+
+    def update_all_indexes_after_replacement(self, old, new, all_indexes):
+
+        for key, value in all_indexes.items():
+            new_index = self.get_new_index(old, new, value)
+            all_indexes.update({key: new_index})
 
         pass
 
+    def get_new_index(self, old, new, index: tuple):
+
+        shift = len(str(new)) - len(str(old))
+        index = index[0] + shift, index[1] + shift
+
+        return index
