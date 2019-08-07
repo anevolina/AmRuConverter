@@ -98,6 +98,7 @@ class ARConverter:
 
     def break_line(self, line):
         """Divide line into amount, measure, item and another words in it"""
+
         result = {}
 
         numbers = self.find_and_check_numbers(line)
@@ -139,6 +140,8 @@ class ARConverter:
         return number_dict
 
     def check_for_single_amount(self, line, number_dict):
+        """Handles lines with amounts in one number (not '4-5 cups', just '4 cups' )"""
+
         amounts = self.find_numbers(line)
 
         if len(amounts) > 0:
@@ -156,6 +159,8 @@ class ARConverter:
         return
 
     def handle_double_amount(self, line, number_dict):
+        """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
+
 
         amounts = self.find_numbers(line)
 
@@ -180,6 +185,8 @@ class ARConverter:
         return
 
     def find_position(self, word, line, number_dict, template=''):
+        """Find position for word in a line. With variable template if needed"""
+
         if template == '':
             template = word
 
@@ -191,6 +198,10 @@ class ARConverter:
         return
 
     def copy_sub_dict(self, full_amount, number_dict):
+        """Copy sub dictionary from one amount to another - used in case when we have amount with 2 numbers
+        for ex. '4 - 5 cups'  here we have to convert amounts for '4 cups' and for '5 cups'
+        """
+
         for key in number_dict['amount']:
             measure_full_amount = number_dict['measure'].get(full_amount)
             old_measure_full_amount = number_dict['old_measure'].get(full_amount)
@@ -201,6 +212,7 @@ class ARConverter:
 
     def find_double_numbers(self, line):
         """Find numbers which go in pairs ex: '4 to 5 cups of flour' """
+
         amounts = []
         n_p = '\d'
 
@@ -486,6 +498,9 @@ class ARConverter:
         return result
 
     def check_possible_fahrenheit(self, amount, convert_amount, number_dict):
+        """We consider a number as a possible fahrenheit if it's larger than 250 (because recipes with this temperature
+        are quite rare)"""
+
         if convert_amount > 250:
             number_dict['possible_F'].update({amount: True})
         else:
@@ -493,6 +508,7 @@ class ARConverter:
             return
 
     def replace_words(self, line, what, to_what, start=0, end=None):
+        """Replace words in line in respect with start and end positions for searching"""
 
         if start == 0 and end == None:
             result = line.replace(what, to_what)
@@ -501,27 +517,8 @@ class ARConverter:
 
         return result
 
-    """
-    def update_all_indexes_after_replacement(self, amount, components, sub_dict):
-
-        amounts = [key for key in components['amount'].keys()]
-        amount_index = amounts.index(str(amount))
-
-        old_value_len = len(sub_dict['old_amount'])
-        new_value_len = len(str(sub_dict['amount']))
-
-        if amount_index < len(amounts)-1:
-            for key in amounts[amount_index+1::]:
-                old_index = components['index'].get(key)
-                new_index_start = old_index[0] - old_value_len + new_value_len
-                new_index_end = old_index[1] - old_value_len + new_value_len
-                new_index = (new_index_start, new_index_end)
-                components['index'].update({key: new_index})
-                # print(key, components)
-
-        pass """
-
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
+        """Updates all indexes for a line"""
 
         for key, value in all_indexes.items():
             new_index = self.get_new_index(old, new, value)
@@ -530,6 +527,7 @@ class ARConverter:
         pass
 
     def get_new_index(self, old, new, index: tuple):
+        """Updates particular given index as a tuple"""
 
         shift = len(str(new)) - len(str(old))
         index = index[0] + shift, index[1] + shift
