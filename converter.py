@@ -42,7 +42,6 @@ class ARConverter:
         if len(components['amount'].keys()) > 0:
             for key in components['amount']:
                 result = self.replace_in_line(result, key, components)
-
         return result
 
     def replace_in_line(self, line, amount, components):
@@ -53,12 +52,15 @@ class ARConverter:
         sub_dict = self.get_sub_dict_for_amount(amount, components)
         amount_index = sub_dict.get('index')
         measure_index = sub_dict.get('index_m')
-        all_indexes = components.get('index')
-        possible_fahrenheit = sub_dict.get('possible_F')
         measure = sub_dict.get('measure')
+        possible_fahrenheit = sub_dict.get('possible_F')
+        all_indexes = components.get('index')
+
+        words = components.get('words')
+
 
         if possible_fahrenheit and not measure:
-            result = self.update_farenheits(result, sub_dict, all_indexes)
+            result = self.update_farenheits(result, sub_dict, all_indexes, words)
             return result
 
         if measure:
@@ -84,6 +86,8 @@ class ARConverter:
 
                 result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
+
+
 
         return result
 
@@ -328,7 +332,7 @@ class ARConverter:
 
         return grams
 
-    def update_farenheits(self, line, sub_dict, all_indexes):
+    def update_farenheits(self, line, sub_dict, all_indexes, words):
         """Convert amount from F to C and replace Fahrenheit word in the line"""
 
         old_amount = sub_dict['amount']
@@ -339,11 +343,9 @@ class ARConverter:
 
         self.update_all_indexes_after_replacement(str(old_amount), str(amount), all_indexes)
 
-        F_word = sub_dict.get('F_word')
-
-        if F_word:
-            result = result.replace(F_word, 'C')
-            self.update_all_indexes_after_replacement(F_word, 'C', all_indexes)
+        for word in words:
+            if word.lower() in self.temperature_name:
+                result = result.replace(word, 'Celsius')
 
         return result
 
@@ -495,10 +497,10 @@ class ARConverter:
         return result
 
     def check_possible_fahrenheit(self, amount, convert_amount, number_dict):
-        """We consider a number as a possible fahrenheit if it's larger than 250 (because recipes with this temperature
+        """We consider a number as a possible fahrenheit if it's larger than 270 (because recipes with this temperature
         are quite rare)"""
 
-        if convert_amount > 250:
+        if convert_amount > 270:
             number_dict['possible_F'].update({amount: True})
         else:
             number_dict['possible_F'].update({amount: False})
