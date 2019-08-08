@@ -75,6 +75,7 @@ Strawberries, 200
 Walnuts, 120
 For test, 67
 Cream, 240
+Heavy cream, 240
 Sour cream, 230
 Yogurt, 230
 oil, 216
