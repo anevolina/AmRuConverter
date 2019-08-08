@@ -78,12 +78,12 @@ class ARConverter:
 
             elif sub_dict.get('old_measure'):
 
-                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
-                self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
-                amount_index = self.get_new_index(sub_dict['old_measure'], sub_dict['measure'], amount_index)
-
                 result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *amount_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_amount'], sub_dict['amount'], all_indexes)
+                measure_index = self.get_new_index(sub_dict['old_amount'], sub_dict['amount'], measure_index)
+
+                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
+                self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
 
         return result
 
@@ -218,8 +218,12 @@ class ARConverter:
 
     def find_numbers(self, line):
         """Find numbers using regexp"""
+        templates = ['\d+[.,]\d+', '\d*[ ]*\d+[/]\d+', '\d+']
 
-        amounts = re.findall(r'\d+[.,]\d+|\d+\s{1}[/\d]+|[/\d]+', line)
+        for template in templates:
+            amounts = re.findall(r'{}'.format(template), line)
+            if len(amounts) > 0:
+                return amounts
 
         return amounts
 
@@ -333,7 +337,7 @@ class ARConverter:
         amount = self.fahrenheit_celsius(old_amount)
         result = self.replace_words(line, str(old_amount), str(amount), *index)
 
-        self.update_all_indexes_after_replacement(old_amount, amount, all_indexes)
+        self.update_all_indexes_after_replacement(str(old_amount), str(amount), all_indexes)
 
         F_word = sub_dict.get('F_word')
 
@@ -502,6 +506,8 @@ class ARConverter:
 
     def replace_words(self, line, what, to_what, start=0, end=None):
         """Replace words in line in respect with start and end positions for searching"""
+        start = (0 if start < 0 else start)
+        end = (0 if end < 0 else end)
 
         if start == 0 and end == None:
             result = line.replace(what, to_what)
