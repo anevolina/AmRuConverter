@@ -1,0 +1,150 @@
+{% load bootstrap3 %}
+
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Am-Ru converter</title>
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    <style>
+
+        @font-face {
+        font-family: "Poiret One";
+        src: url(https://fonts.googleapis.com/css?family=Poiret+One) format("truetype");
+        }
+
+        textarea.form-control {
+            min-width: 100%;
+            max-width: 100%;
+            border: none;
+            box-shadow: none;
+            height: 100%;
+            background: #fffdf8;
+
+        }
+
+        h4{
+            text-align: center;
+        }
+
+        body {
+            font-family: 'Roboto Slab', sans-serif;
+            color: #555;
+            background: #fff7da2b;
+        }
+
+        .header{
+            font-family: 'Poiret One';
+            text-transform: uppercase;
+            font-size: 23px;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-top: 3%;
+            margin-bottom: 2%;
+
+        }
+
+        .col-header {
+            padding: 5%;
+            background-color: #cccccc21;
+            margin: 0;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            font-size: 23px;
+            color: #333;
+
+        }
+
+        .main-container {
+            padding-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            box-shadow: 0 0 10px rgb(227, 227, 227);
+            margin-bottom: 10px;
+        }
+
+        .has-success .form-control,
+        .has-success .form-control:focus,
+        .form-control:focus {
+            border: none;
+            outline: 0;
+            -webkit-box-shadow: none;
+           box-shadow:none;
+        }
+
+        .my-column {
+            padding: 0;
+            padding-left: 15px;
+            display: flex;
+            flex-direction: column;
+
+        }
+
+        .right-column{
+            padding-right: 15px;
+        }
+
+        .my-column p {
+            padding-left: 15px;
+        }
+
+        .my-column > .form-group {
+            height: 100%;
+        }
+
+        .my-btn{
+        margin-top: 10px;
+        padding: 1%;
+        background-color: #3B283B;
+        border-color: #280848;
+        font-size: 21px;
+        }
+
+       .btn-primary:active:focus, .btn-primary:active,
+       .btn-primary .focus, .btn-primary:focus,
+       .btn-primary:hover {
+         color: #fff;
+         background-color: #512857;
+         border-color: #400330;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header   ">Конвертер рецептов из американской системы счисления в граммы</h1>
+        <hr style="width: 300px; margin-bottom: 30px;"/>
+        <div>
+            <form action="{% url 'converter:index'%}" method = POST>
+                {% csrf_token %}
+
+                <div class="row main-container">
+                    <div class="col-md-6 col-sm-6 col-xs-12 my-column">
+                        <h4 class="col-header">Американская</h4>
+                        {% bootstrap_form form%}
+                    </div>
+                    <div class="col-md-6 col-sm-6 col-xs-12 my-column right-column">
+                         <h4 class="col-header">Метрическая</h4>
+                        {{translation|linebreaks}}
+                    </div>
+                 </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                        <button class="btn btn-primary btn-block my-btn" name="submit"> Сотвори чудо! </button>
+                </div>
+
+            </div>
+        <div style="margin-top: 10px; text-align: right;">
+            Сообщить о неисправности: <a href="mailto:anevolina@pm.me">anevolina@pm.me</a>
+        </div>
+
+        </form>
+
+    </div>
+
+</body>
+</html>
