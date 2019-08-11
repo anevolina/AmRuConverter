@@ -9,7 +9,6 @@ import json
 import os.path
 
 
-
 class ARConverter:
 
     def __init__(self):
@@ -193,10 +192,12 @@ class ARConverter:
             template = word
 
         pre_positions = re.finditer(template, line)
-        positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
+        try:
+            positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
+            number_dict['index'].update({word: positions[0]})
 
-        number_dict['index'].update({word: positions[0]})
-
+        except:
+            number_dict['index'].update({word: (0, len(line))})
         return
 
     def copy_sub_dict(self, full_amount, number_dict):
@@ -288,7 +289,7 @@ class ARConverter:
                     measure = self.units[i][0]
                     number_dict['measure'].update({amount: measure})
                     number_dict['old_measure'].update({amount: word})
-                    template = r'[ \d]{}[ \d]*|[ \d]*{}[ \d]'.format(word, word)
+                    template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
                     self.find_position(word, line, number_dict, template)
 
 
