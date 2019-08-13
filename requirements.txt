@@ -4,6 +4,7 @@ Django==2.2.4
 django-bootstrap3==11.1.0
 googletrans==2.4.0
 idna==2.8
+python-dotenv==0.10.3
 pytz==2019.2
 requests==2.22.0
 sqlparse==0.3.0
