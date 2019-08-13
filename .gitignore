@@ -6,3 +6,6 @@ __pycache__/
 am_ru_converter/.env
 main.py
 venv/
+am_ru_converter/__pycache__/
+converter/__pycache__/
+converter/migrations/__pycache__/
