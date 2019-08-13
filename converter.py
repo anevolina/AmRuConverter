@@ -6,6 +6,7 @@ and finishing with cups/tsp/Tbsp to grams
 
 import re
 import json
+import os.path
 
 
 class ARConverter:
@@ -21,7 +22,9 @@ class ARConverter:
         """
 
         self.coefficients = dict()
-        with open('coefficients.json', 'r') as coefficients:
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+
+        with open(os.path.join(file_dir, 'coefficients.json'), 'r') as coefficients:
             self.coefficients = json.load(coefficients)
 
         self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240, 'stick': 120}
@@ -189,10 +192,12 @@ class ARConverter:
             template = word
 
         pre_positions = re.finditer(template, line)
-        positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
+        try:
+            positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
+            number_dict['index'].update({word: positions[0]})
 
-        number_dict['index'].update({word: positions[0]})
-
+        except:
+            number_dict['index'].update({word: (0, len(line))})
         return
 
     def copy_sub_dict(self, full_amount, number_dict):
@@ -284,7 +289,7 @@ class ARConverter:
                     measure = self.units[i][0]
                     number_dict['measure'].update({amount: measure})
                     number_dict['old_measure'].update({amount: word})
-                    template = r'[ \d]{}[ \d]*|[ \d]*{}[ \d]'.format(word, word)
+                    template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
                     self.find_position(word, line, number_dict, template)
 
 
