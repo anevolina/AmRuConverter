@@ -1,0 +1,8 @@
+.env
+.idea/
+Data/
+TODO.txt
+__pycache__/
+am_ru_converter/.env
+main.py
+venv/
