@@ -7,13 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <title>Am-Ru converter</title>
     {% bootstrap_css %}
-    {% bootstrap_javascript %}
+    <link href="https://fonts.googleapis.com/css?family=Poiret+One&display=swap" rel="stylesheet">
+
+
     <style>
 
-        @font-face {
-        font-family: "Poiret One";
-        src: url(https://fonts.googleapis.com/css?family=Poiret+One) format("truetype");
-        }
 
         textarea.form-control {
             min-width: 100%;
@@ -36,7 +34,7 @@
         }
 
         .header{
-            font-family: 'Poiret One';
+            font-family: 'Poiret One', cursive;
             text-transform: uppercase;
             font-size: 23px;
             text-align: center;
@@ -145,6 +143,6 @@
         </form>
 
     </div>
-
+    {% bootstrap_javascript %}
 </body>
 </html>
