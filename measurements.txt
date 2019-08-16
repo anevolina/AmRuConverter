@@ -25,6 +25,9 @@ syrup 340
 molasses, 340
 almond powder, 100
 almond flakes, 85
+almonds powder, 100
+almonds flakes, 85
+almonds, 150
 Chocolate 150
 
     #and again
@@ -65,6 +68,7 @@ whole peanuts, 150
 peanuts, 135
 Peanut Butter, 250
 Pecans, 120
+Pecan, 120
 Pearl Barley, 200
 barley, 200
 Raisins, 150
@@ -88,3 +92,12 @@ Banana mashed, 300
 Bananas puree, 300
 Bananas mashed, 300
 berries, 100
+mayonnaise, 230
+mayo, 230
+coffee, 240
+coffee brewed, 240
+coffee ground, 85
+7Up, 240
+poppy seeds, 125
+seeds, 125
+
