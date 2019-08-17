@@ -100,4 +100,6 @@ coffee ground, 85
 7Up, 240
 poppy seeds, 125
 seeds, 125
+beer, 240
+stout, 240
 
