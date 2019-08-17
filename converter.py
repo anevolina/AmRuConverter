@@ -103,7 +103,6 @@ class ARConverter:
 
                 result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), amount_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_amount'], sub_dict['amount'], all_indexes)
-                measure_index = self.get_new_index(sub_dict['old_amount'], sub_dict['amount'], measure_index)
 
                 result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], measure_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
@@ -269,7 +268,6 @@ class ARConverter:
         for symbol in p_s:
 
             left_pattern = r'\b[a-zA-Z][^\s]*\b[ {}]*(?=' + amount + ')'.format(symbol)
-            # right_pattern = r'(?<=' + amount + ')[ {}]*[a-zA-Z]*'.format(symbol)
             right_pattern = r'(?<!\d)' + amount + '[ {}]*([a-zA-Z]+)'.format(symbol)
 
             left_word = re.findall(left_pattern, line)
@@ -317,11 +315,7 @@ class ARConverter:
 
         # Check if word is Fahrenheit word
             if word.lower() in self.fahrenheit_names:
-                # number_dict['F_word'].update({amount: word})
                 number_dict['possible_F'].update({amount: True})
-                # template = r'[ \d-]{}[ ]'.format(word)
-                # self.find_position(word, line, number_dict, template)
-
 
 
         return
@@ -380,7 +374,6 @@ class ARConverter:
                 template = '[ \d-]{}[ ]'.format(word)
                 index = self.find_position(word, line, sub_dict, template, simple=True)
                 result = self.replace_words(result, word, 'Celsius', *index)
-                # self.update_all_indexes_after_replacement(word, 'Celsius', all_indexes)
 
             if word.lower() in self.celsius_names:
                 warning = True
@@ -411,11 +404,10 @@ class ARConverter:
         new_amount = str(round(cups_to_grams[0]))
 
         if cups_to_grams[1]:  # if conversion is success
-            result = self.replace_words(result, old_amount, new_amount, *index)
+            result = self.replace_words(result, old_amount, new_amount, index)
             self.update_all_indexes_after_replacement(old_amount, new_amount, all_indexes)
-            index_m = self.get_new_index(old_amount, new_amount, index_m)
 
-            result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+            result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
             self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
@@ -440,7 +432,6 @@ class ARConverter:
         grams = self.oz_grams(sub_dict['amount'])
         result = self.replace_words(line, sub_dict['old_amount'], str(grams), index)
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
-        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
         result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
@@ -457,12 +448,10 @@ class ARConverter:
         grams = self.lb_grams(old_amount)
         result = self.replace_words(line, str(sub_dict['old_amount']), str(grams), *index)
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
-        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
         result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
-        # sub_dict.update({'amount': grams})
 
         return result
 
