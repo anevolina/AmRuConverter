@@ -73,7 +73,6 @@ class ARConverter:
 
         words = components.get('words')
 
-
         if possible_fahrenheit:
 
             old_measure = sub_dict.get('old_measure')
@@ -102,11 +101,10 @@ class ARConverter:
 
             elif sub_dict.get('old_measure'):
 
-                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *amount_index)
+                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), amount_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_amount'], sub_dict['amount'], all_indexes)
-                measure_index = self.get_new_index(sub_dict['old_amount'], sub_dict['amount'], measure_index)
 
-                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
+                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], measure_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
 
 
@@ -156,11 +154,10 @@ class ARConverter:
                        'possible_F': {}, 'index': {}}
         double_amounts = self.find_double_numbers(line)
 
-        if len(double_amounts) == 0:
-            self.check_for_single_amount(line, number_dict)
+        self.check_for_single_amount(line, number_dict)
 
-        else:
-            self.handle_double_amount(line, number_dict)
+        if len(double_amounts) > 0:
+            self.handle_double_amount(line, number_dict, double_amounts)
 
         return number_dict
 
@@ -183,10 +180,12 @@ class ARConverter:
 
         return
 
-    def handle_double_amount(self, line, number_dict):
+    def handle_double_amount(self, line, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
-
-        amounts = self.find_numbers(line)
+        amounts = []
+        for d_amount in double_amounts:
+            amounts += self.find_numbers(d_amount)
+            print('here!')
 
         for amount in amounts:
 
@@ -200,7 +199,7 @@ class ARConverter:
             self.look_around_number(line, amount, number_dict)
 
             if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
-                self.copy_sub_dict(amount, number_dict)
+                self.copy_sub_dict(amount, amounts, number_dict)
 
         return
 
@@ -215,24 +214,24 @@ class ARConverter:
             positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
             if simple:
                 return positions
-            number_dict['index'].update({word: positions[0]})
-
+            number_dict['index'].update({word: positions})
         except:
             if simple:
                 return (0, len((line)))
             number_dict['index'].update({word: (0, len(line))})
         return
 
-    def copy_sub_dict(self, full_amount, number_dict):
+    def copy_sub_dict(self, full_amount, amounts, number_dict):
         """Copy sub dictionary from one amount to another - used in case when we have amount with 2 numbers
         for ex. '4 - 5 cups'  here we have to convert amounts for '4 cups' and for '5 cups'
         """
 
         for key in number_dict['amount']:
-            measure_full_amount = number_dict['measure'].get(full_amount)
-            old_measure_full_amount = number_dict['old_measure'].get(full_amount)
-            number_dict['measure'].update({key: measure_full_amount})
-            number_dict['old_measure'].update({key: old_measure_full_amount})
+            if key in amounts:
+                measure_full_amount = number_dict['measure'].get(full_amount)
+                old_measure_full_amount = number_dict['old_measure'].get(full_amount)
+                number_dict['measure'].update({key: measure_full_amount})
+                number_dict['old_measure'].update({key: old_measure_full_amount})
 
         return
 
@@ -240,7 +239,7 @@ class ARConverter:
         """Find numbers which go in pairs ex: '4 to 5 cups of flour' """
 
         amounts = []
-        n_p = '\d'
+        n_p = '\d+'
 
         split_words = ['to', '-']
         for s_word in split_words:
@@ -248,16 +247,18 @@ class ARConverter:
 
         return amounts
 
-    def find_numbers(self, line):
+    def find_numbers(self, line, templates=None):
         """Find numbers using regexp"""
-        templates = ['\d+[.,]\d+', '\d*[ ]*\d+[/]\d+', '\d+']
+        if not templates:
+            templates = ['\d+[.,]\d+|\d*[ ]*\d+[/]\d+|\d+']
 
         for template in templates:
             amounts = re.findall(r'{}'.format(template), line)
+
             if len(amounts) > 0:
                 return amounts
 
-        return amounts
+        return []
 
     def look_around_number(self, line, amount, number_dict):
         """Find words around number and check them further"""
@@ -270,7 +271,6 @@ class ARConverter:
         for symbol in p_s:
 
             left_pattern = r'\b[a-zA-Z][^\s]*\b[ {}]*(?=' + amount + ')'.format(symbol)
-            # right_pattern = r'(?<=' + amount + ')[ {}]*[a-zA-Z]*'.format(symbol)
             right_pattern = r'(?<!\d)' + amount + '[ {}]*([a-zA-Z]+)'.format(symbol)
 
             left_word = re.findall(left_pattern, line)
@@ -318,11 +318,7 @@ class ARConverter:
 
         # Check if word is Fahrenheit word
             if word.lower() in self.fahrenheit_names:
-                # number_dict['F_word'].update({amount: word})
                 number_dict['possible_F'].update({amount: True})
-                # template = r'[ \d-]{}[ ]'.format(word)
-                # self.find_position(word, line, number_dict, template)
-
 
 
         return
@@ -380,8 +376,7 @@ class ARConverter:
             if word.lower() in self.fahrenheit_names:
                 template = '[ \d-]{}[ ]'.format(word)
                 index = self.find_position(word, line, sub_dict, template, simple=True)
-                result = self.replace_words(result, word, 'Celsius', *index[0])
-                # self.update_all_indexes_after_replacement(word, 'Celsius', all_indexes)
+                result = self.replace_words(result, word, 'Celsius', *index)
 
             if word.lower() in self.celsius_names:
                 warning = True
@@ -412,11 +407,10 @@ class ARConverter:
         new_amount = str(round(cups_to_grams[0]))
 
         if cups_to_grams[1]:  # if conversion is success
-            result = self.replace_words(result, old_amount, new_amount, *index)
+            result = self.replace_words(result, old_amount, new_amount, index)
             self.update_all_indexes_after_replacement(old_amount, new_amount, all_indexes)
-            index_m = self.get_new_index(old_amount, new_amount, index_m)
 
-            result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+            result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
             self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
@@ -439,11 +433,10 @@ class ARConverter:
         index_m = sub_dict.get('index_m')
 
         grams = self.oz_grams(sub_dict['amount'])
-        result = self.replace_words(line, sub_dict['old_amount'], str(grams), *index)
+        result = self.replace_words(line, sub_dict['old_amount'], str(grams), index)
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
-        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
@@ -458,12 +451,10 @@ class ARConverter:
         grams = self.lb_grams(old_amount)
         result = self.replace_words(line, str(sub_dict['old_amount']), str(grams), *index)
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
-        index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
-        # sub_dict.update({'amount': grams})
 
         return result
 
@@ -554,22 +545,30 @@ class ARConverter:
             number_dict['possible_F'].update({amount: False})
             return
 
-    def replace_words(self, line, what, to_what, start=0, end=None):
+    def replace_words(self, line, what, to_what, args=None):
         """Replace words in line in respect with start and end positions for searching"""
+        if type(args) == tuple:
+            start = args[0]
+            end = args[1]
 
-        start = (0 if start < 0 else start)
-        end = (0 if end < 0 else end)
 
-        if start == 0 and end == None:
-            result = line.replace(what, to_what)
+        elif type(args) == list and len(args) > 0:
+
+            first = args[0]
+            args.remove(first)
+            start = first[0]
+            end = first[1]
+
         else:
-            result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
+            result = line.replace(what, to_what)
+            return result
+
+        result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
 
         return result
 
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
         """Updates all indexes for a line"""
-        print(old, new, all_indexes)
         keys = [key for key in all_indexes]
         key_index = keys.index(old)
 
@@ -582,10 +581,11 @@ class ARConverter:
 
         pass
 
-    def get_new_index(self, old, new, index: tuple):
+    def get_new_index(self, old, new, index):
         """Updates particular given index as a tuple"""
 
-        shift = len(str(new)) - len(str(old))
-        index = index[0] + shift, index[1] + shift
+        for i in range(len(index)):
+            shift = len(str(new)) - len(str(old))
+            index[i] = index[i][0] + shift, index[i][1] + shift
 
         return index
