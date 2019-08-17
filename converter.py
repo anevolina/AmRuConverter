@@ -73,7 +73,6 @@ class ARConverter:
 
         words = components.get('words')
 
-
         if possible_fahrenheit:
 
             old_measure = sub_dict.get('old_measure')
@@ -102,11 +101,11 @@ class ARConverter:
 
             elif sub_dict.get('old_measure'):
 
-                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), *amount_index)
+                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), amount_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_amount'], sub_dict['amount'], all_indexes)
                 measure_index = self.get_new_index(sub_dict['old_amount'], sub_dict['amount'], measure_index)
 
-                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], *measure_index)
+                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], measure_index)
                 self.update_all_indexes_after_replacement(sub_dict['old_measure'], sub_dict['measure'], all_indexes)
 
 
@@ -215,8 +214,7 @@ class ARConverter:
             positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
             if simple:
                 return positions
-            number_dict['index'].update({word: positions[0]})
-
+            number_dict['index'].update({word: positions})
         except:
             if simple:
                 return (0, len((line)))
@@ -250,10 +248,11 @@ class ARConverter:
 
     def find_numbers(self, line):
         """Find numbers using regexp"""
-        templates = ['\d+[.,]\d+', '\d*[ ]*\d+[/]\d+', '\d+']
+        templates = ['\d+[.,]\d+|\d*[ ]*\d+[/]\d+|\d+']
 
         for template in templates:
             amounts = re.findall(r'{}'.format(template), line)
+
             if len(amounts) > 0:
                 return amounts
 
@@ -380,7 +379,7 @@ class ARConverter:
             if word.lower() in self.fahrenheit_names:
                 template = '[ \d-]{}[ ]'.format(word)
                 index = self.find_position(word, line, sub_dict, template, simple=True)
-                result = self.replace_words(result, word, 'Celsius', *index[0])
+                result = self.replace_words(result, word, 'Celsius', *index)
                 # self.update_all_indexes_after_replacement(word, 'Celsius', all_indexes)
 
             if word.lower() in self.celsius_names:
@@ -439,11 +438,11 @@ class ARConverter:
         index_m = sub_dict.get('index_m')
 
         grams = self.oz_grams(sub_dict['amount'])
-        result = self.replace_words(line, sub_dict['old_amount'], str(grams), *index)
+        result = self.replace_words(line, sub_dict['old_amount'], str(grams), index)
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
         index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         return result
@@ -460,7 +459,7 @@ class ARConverter:
         self.update_all_indexes_after_replacement(sub_dict['old_amount'], grams, all_indexes)
         index_m = self.get_new_index(sub_dict['old_amount'], grams, index_m)
 
-        result = self.replace_words(result, sub_dict['old_measure'], 'grams', *index_m)
+        result = self.replace_words(result, sub_dict['old_measure'], 'grams', index_m)
         self.update_all_indexes_after_replacement(sub_dict['old_measure'], 'grams', all_indexes)
 
         # sub_dict.update({'amount': grams})
@@ -554,22 +553,28 @@ class ARConverter:
             number_dict['possible_F'].update({amount: False})
             return
 
-    def replace_words(self, line, what, to_what, start=0, end=None):
+    def replace_words(self, line, what, to_what, args=None):
         """Replace words in line in respect with start and end positions for searching"""
+        if type(args) == tuple:
+            start = args[0]
+            end = args[1]
 
-        start = (0 if start < 0 else start)
-        end = (0 if end < 0 else end)
+        elif type(args) == list:
+            first = args[0]
+            args.remove(first)
+            start = first[0]
+            end = first[1]
 
-        if start == 0 and end == None:
-            result = line.replace(what, to_what)
         else:
-            result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
+            result = line.replace(what, to_what)
+            return result
+
+        result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
 
         return result
 
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
         """Updates all indexes for a line"""
-        print(old, new, all_indexes)
         keys = [key for key in all_indexes]
         key_index = keys.index(old)
 
@@ -582,10 +587,11 @@ class ARConverter:
 
         pass
 
-    def get_new_index(self, old, new, index: tuple):
+    def get_new_index(self, old, new, index):
         """Updates particular given index as a tuple"""
 
-        shift = len(str(new)) - len(str(old))
-        index = index[0] + shift, index[1] + shift
+        for i in range(len(index)):
+            shift = len(str(new)) - len(str(old))
+            index[i] = index[i][0] + shift, index[i][1] + shift
 
         return index
