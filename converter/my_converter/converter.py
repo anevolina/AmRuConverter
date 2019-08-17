@@ -29,12 +29,24 @@ class ARConverter:
 
         self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240, 'stick': 120}
 
-        self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs','pound', 'pounds'],
+        self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs', 'pound', 'pounds'],
                       ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
                       ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks']]
-        self.temperature_name = ['f', 'fahrenheit', 'fahrenheits']
+        self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
+        self.celsius_names = ['c', 'celsius']
 
     def process_line(self, line):
+        is_link_templ = 'https|www|com'
+        is_link = re.findall(is_link_templ, line)
+
+        if is_link:
+            return line
+        else:
+           result = self.after_check_process_line(line)
+        return result
+
+
+    def after_check_process_line(self, line):
         """The main procedure - delete incorrect symbols, process the line, replace all measurements and
         returns converted result"""
 
@@ -62,8 +74,15 @@ class ARConverter:
         words = components.get('words')
 
 
-        if possible_fahrenheit and not measure:
-            result = self.update_farenheits(result, sub_dict, all_indexes, words)
+        if possible_fahrenheit:
+
+            old_measure = sub_dict.get('old_measure')
+            if old_measure in ['c', 'C']:
+                result = self.update_farenheits(result, sub_dict, all_indexes, words, warning=True)
+
+            if not measure:
+                result = self.update_farenheits(result, sub_dict, all_indexes, words)
+
             return result
 
         if measure:
@@ -134,7 +153,7 @@ class ARConverter:
         """Find all numbers in a line and check words around them"""
 
         number_dict = {'amount': {}, 'measure': {}, 'old_measure': {},
-                       'F_word': {}, 'possible_F': {}, 'index': {}}
+                       'possible_F': {}, 'index': {}}
         double_amounts = self.find_double_numbers(line)
 
         if len(double_amounts) == 0:
@@ -185,7 +204,7 @@ class ARConverter:
 
         return
 
-    def find_position(self, word, line, number_dict, template=''):
+    def find_position(self, word, line, number_dict, template='', simple=False):
         """Find position for word in a line. With variable template if needed"""
 
         if template == '':
@@ -194,9 +213,13 @@ class ARConverter:
         pre_positions = re.finditer(template, line)
         try:
             positions = [(pos.start(0), pos.end(0)) for pos in pre_positions]
+            if simple:
+                return positions
             number_dict['index'].update({word: positions[0]})
 
         except:
+            if simple:
+                return (0, len((line)))
             number_dict['index'].update({word: (0, len(line))})
         return
 
@@ -294,9 +317,13 @@ class ARConverter:
 
 
         # Check if word is Fahrenheit word
-            if word.lower() in self.temperature_name:
-                number_dict['F_word'].update({amount: word})
+            if word.lower() in self.fahrenheit_names:
+                # number_dict['F_word'].update({amount: word})
                 number_dict['possible_F'].update({amount: True})
+                # template = r'[ \d-]{}[ ]'.format(word)
+                # self.find_position(word, line, number_dict, template)
+
+
 
         return
 
@@ -337,7 +364,8 @@ class ARConverter:
 
         return grams
 
-    def update_farenheits(self, line, sub_dict, all_indexes, words):
+
+    def update_farenheits(self, line, sub_dict, all_indexes, words, warning=False):
         """Convert amount from F to C and replace Fahrenheit word in the line"""
 
         old_amount = sub_dict['amount']
@@ -349,9 +377,24 @@ class ARConverter:
         self.update_all_indexes_after_replacement(str(old_amount), str(amount), all_indexes)
 
         for word in words:
-            if word.lower() in self.temperature_name:
-                result = result.replace(word, 'Celsius')
+            if word.lower() in self.fahrenheit_names:
+                template = '[ \d-]{}[ ]'.format(word)
+                index = self.find_position(word, line, sub_dict, template, simple=True)
+                result = self.replace_words(result, word, 'Celsius', *index[0])
+                # self.update_all_indexes_after_replacement(word, 'Celsius', all_indexes)
 
+            if word.lower() in self.celsius_names:
+                warning = True
+
+        if warning:
+            key = '(Possible mistake! {} - too much to be in Celsius. {}F = {}C)'.format(old_amount, old_amount, amount)
+            result = self.add_warning(line, key)
+
+        return result
+
+    def add_warning(self, line, key):
+
+        result = line + ' ' + key
         return result
 
     # High-level conversion functions
@@ -513,6 +556,7 @@ class ARConverter:
 
     def replace_words(self, line, what, to_what, start=0, end=None):
         """Replace words in line in respect with start and end positions for searching"""
+
         start = (0 if start < 0 else start)
         end = (0 if end < 0 else end)
 
@@ -525,6 +569,7 @@ class ARConverter:
 
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
         """Updates all indexes for a line"""
+        print(old, new, all_indexes)
         keys = [key for key in all_indexes]
         key_index = keys.index(old)
 
