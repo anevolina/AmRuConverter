@@ -26,8 +26,6 @@ def index(request):
             translation = translator.translate(recipe, dest='ru')
             translation = translation.text
 
-
-
     context = {'form': form, 'translation': translation}
 
     return render(request, 'converter/index.html', context)
