@@ -154,11 +154,10 @@ class ARConverter:
                        'possible_F': {}, 'index': {}}
         double_amounts = self.find_double_numbers(line)
 
-        if len(double_amounts) == 0:
-            self.check_for_single_amount(line, number_dict)
+        self.check_for_single_amount(line, number_dict)
 
-        else:
-            self.handle_double_amount(line, number_dict)
+        if len(double_amounts) > 0:
+            self.handle_double_amount(line, number_dict, double_amounts)
 
         return number_dict
 
@@ -181,10 +180,12 @@ class ARConverter:
 
         return
 
-    def handle_double_amount(self, line, number_dict):
+    def handle_double_amount(self, line, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
-
-        amounts = self.find_numbers(line)
+        amounts = []
+        for d_amount in double_amounts:
+            amounts += self.find_numbers(d_amount)
+            print('here!')
 
         for amount in amounts:
 
@@ -198,7 +199,7 @@ class ARConverter:
             self.look_around_number(line, amount, number_dict)
 
             if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
-                self.copy_sub_dict(amount, number_dict)
+                self.copy_sub_dict(amount, amounts, number_dict)
 
         return
 
@@ -220,16 +221,17 @@ class ARConverter:
             number_dict['index'].update({word: (0, len(line))})
         return
 
-    def copy_sub_dict(self, full_amount, number_dict):
+    def copy_sub_dict(self, full_amount, amounts, number_dict):
         """Copy sub dictionary from one amount to another - used in case when we have amount with 2 numbers
         for ex. '4 - 5 cups'  here we have to convert amounts for '4 cups' and for '5 cups'
         """
 
         for key in number_dict['amount']:
-            measure_full_amount = number_dict['measure'].get(full_amount)
-            old_measure_full_amount = number_dict['old_measure'].get(full_amount)
-            number_dict['measure'].update({key: measure_full_amount})
-            number_dict['old_measure'].update({key: old_measure_full_amount})
+            if key in amounts:
+                measure_full_amount = number_dict['measure'].get(full_amount)
+                old_measure_full_amount = number_dict['old_measure'].get(full_amount)
+                number_dict['measure'].update({key: measure_full_amount})
+                number_dict['old_measure'].update({key: old_measure_full_amount})
 
         return
 
@@ -237,7 +239,7 @@ class ARConverter:
         """Find numbers which go in pairs ex: '4 to 5 cups of flour' """
 
         amounts = []
-        n_p = '\d'
+        n_p = '\d+'
 
         split_words = ['to', '-']
         for s_word in split_words:
@@ -245,9 +247,10 @@ class ARConverter:
 
         return amounts
 
-    def find_numbers(self, line):
+    def find_numbers(self, line, templates=None):
         """Find numbers using regexp"""
-        templates = ['\d+[.,]\d+|\d*[ ]*\d+[/]\d+|\d+']
+        if not templates:
+            templates = ['\d+[.,]\d+|\d*[ ]*\d+[/]\d+|\d+']
 
         for template in templates:
             amounts = re.findall(r'{}'.format(template), line)
@@ -255,7 +258,7 @@ class ARConverter:
             if len(amounts) > 0:
                 return amounts
 
-        return amounts
+        return []
 
     def look_around_number(self, line, amount, number_dict):
         """Find words around number and check them further"""
@@ -548,7 +551,9 @@ class ARConverter:
             start = args[0]
             end = args[1]
 
-        elif type(args) == list:
+
+        elif type(args) == list and len(args) > 0:
+
             first = args[0]
             args.remove(first)
             start = first[0]
