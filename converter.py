@@ -36,6 +36,17 @@ class ARConverter:
         self.celsius_names = ['c', 'celsius']
 
     def process_line(self, line):
+        is_link_templ = 'https|www|com'
+        is_link = re.findall(is_link_templ, line)
+
+        if is_link:
+            return line
+        else:
+           result = self.after_check_process_line(line)
+        return result
+
+
+    def after_check_process_line(self, line):
         """The main procedure - delete incorrect symbols, process the line, replace all measurements and
         returns converted result"""
 
@@ -558,6 +569,7 @@ class ARConverter:
 
     def update_all_indexes_after_replacement(self, old, new, all_indexes):
         """Updates all indexes for a line"""
+        print(old, new, all_indexes)
         keys = [key for key in all_indexes]
         key_index = keys.index(old)
 
