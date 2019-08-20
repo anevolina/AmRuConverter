@@ -8,6 +8,7 @@ class TestTemperatureConvert(unittest.TestCase):
     def setUp(self) -> None:
         self.my_converter = ARConverter()
         self.number_dict = {'amount': {}, 'measure': {}, 'old_measure': {}, 'F_word': {}, 'possible_F': {}, 'index': {}}
+        self.words = ['cup', 'all', 'purpose', 'flour']
 
     def test_str_to_int_convert_amount_complete(self):
         fraction1 = self.my_converter.str_to_int_convert_amount('18 2/3')
@@ -94,7 +95,7 @@ class TestTemperatureConvert(unittest.TestCase):
         self.assertEqual(number3, ['3.5'])
         self.assertEqual(number4, ['1,8'])
         self.assertEqual(numbers56, ['1', '8'])
-        self.assertEqual(number7, ['3.25'])
+        self.assertEqual(number7, ['1', '3.25'])
 
     def test_look_around_number(self):
         words1 = self.my_converter.look_around_number('16 oz can', '16', self.number_dict)
@@ -106,13 +107,14 @@ class TestTemperatureConvert(unittest.TestCase):
         self.assertEqual(words3, ['lb'])
 
     def test_update_farenheits(self):
-        all_indexes = {'350': (17, 20), 'F': (21, 22)}
-        line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', {'amount': 350, 'F_word': 'F', 'index':
-            (18, 21)}, all_indexes)
-        line2 = self.my_converter.update_farenheits('Preheat oven till 350', {'amount': 350, 'index': (18, 21)},
-                                                    all_indexes)
+        all_indexes = {'350': [(18, 21)]}
+        sub_dict1 = {'old_amount': '350', 'amount': 350, 'possible_F': True, 'index': [(18, 21)], 'item': '', 'words': ['Preheat', 'oven', 'till', 'F']}
+        sub_dict2 = {'old_amount': '350', 'amount': 350, 'possible_F': True, 'index': [(18, 21)], 'item': '', 'words': ['Preheat', 'oven', 'till']}
 
-        self.assertEqual(line1, 'Preheat oven till 177 C')
+        line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', sub_dict1, all_indexes)
+        line2 = self.my_converter.update_farenheits('Preheat oven till 350', sub_dict2, all_indexes)
+
+        self.assertEqual(line1, 'Preheat oven till 177 Celsius')
         self.assertEqual(line2, 'Preheat oven till 177')
 
 
