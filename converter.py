@@ -32,7 +32,7 @@ class ARConverter:
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs', 'pound', 'pounds'],
                       ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
-                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks']]
+                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks'], ['ml', 'milliliters', 'milliliter']]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
         demoji.download_codes()
