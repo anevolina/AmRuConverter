@@ -7,6 +7,7 @@ and finishing with cups/tsp/Tbsp to grams
 import re
 import json
 import os.path
+import demoji
 
 
 class ARConverter:
@@ -34,23 +35,20 @@ class ARConverter:
                       ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks']]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
+        demoji.download_codes()
+
 
     def process_line(self, line):
-        is_link_templ = 'https|www|com'
-        is_link = re.findall(is_link_templ, line)
-
-        if is_link:
-            return line
-        else:
-           result = self.after_check_process_line(line)
-        return result
-
-
-    def after_check_process_line(self, line):
         """The main procedure - delete incorrect symbols, process the line, replace all measurements and
         returns converted result"""
 
         result = self.delete_incorrect_symbols(line)
+
+        is_link_templ = 'https|www|.com'
+        is_link = re.findall(is_link_templ, result)
+
+        if is_link:
+            return result
 
         components = self.break_line(result)
 
@@ -115,6 +113,13 @@ class ARConverter:
         symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': ''}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, ' ' + value, 1).strip()
+        line = self.deEmojify(line)
+
+        return line
+
+    def deEmojify(self, line):
+        line = demoji.replace(line)
+
         return line
 
     def break_line(self, line):
