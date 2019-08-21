@@ -7,6 +7,7 @@ and finishing with cups/tsp/Tbsp to grams
 import re
 import json
 import os.path
+import demoji
 
 
 class ARConverter:
@@ -31,26 +32,23 @@ class ARConverter:
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs', 'pound', 'pounds'],
                       ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
-                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks']]
+                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks'], ['ml', 'milliliters', 'milliliter']]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
+        demoji.download_codes()
+
 
     def process_line(self, line):
-        is_link_templ = 'https|www|com'
-        is_link = re.findall(is_link_templ, line)
-
-        if is_link:
-            return line
-        else:
-           result = self.after_check_process_line(line)
-        return result
-
-
-    def after_check_process_line(self, line):
         """The main procedure - delete incorrect symbols, process the line, replace all measurements and
         returns converted result"""
 
         result = self.delete_incorrect_symbols(line)
+
+        is_link_templ = 'https|www|.com'
+        is_link = re.findall(is_link_templ, result)
+
+        if is_link:
+            return result
 
         components = self.break_line(result)
 
@@ -115,6 +113,13 @@ class ARConverter:
         symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': ''}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, ' ' + value, 1).strip()
+        line = self.deEmojify(line)
+
+        return line
+
+    def deEmojify(self, line):
+        line = demoji.replace(line)
+
         return line
 
     def break_line(self, line):
@@ -155,7 +160,7 @@ class ARConverter:
         self.check_for_single_amount(line, number_dict)
 
         if len(double_amounts) > 0:
-            self.handle_double_amount(line, number_dict, double_amounts)
+            self.handle_double_amount(number_dict, double_amounts)
 
         return number_dict
 
@@ -167,7 +172,8 @@ class ARConverter:
         if len(amounts) > 0:
             for amount in amounts:
                 amount = amount.strip()
-                self.find_position(amount, line, number_dict)
+                template = '(?<!\d){}(?![/.-])'.format(amount)
+                self.find_position(amount, line, number_dict, template)
                 convert_amount = self.str_to_int_convert_amount(amount)
 
                 number_dict['amount'].update({amount: convert_amount})
@@ -178,7 +184,7 @@ class ARConverter:
 
         return
 
-    def handle_double_amount(self, line, number_dict, double_amounts):
+    def handle_double_amount(self, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
         amounts = []
         for d_amount in double_amounts:
@@ -194,6 +200,7 @@ class ARConverter:
 
     def find_position(self, word, line, number_dict, template='', simple=False):
         """Find position for word in a line. With variable template if needed"""
+
 
         if template == '':
             template = word
