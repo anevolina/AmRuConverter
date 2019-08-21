@@ -160,7 +160,7 @@ class ARConverter:
         self.check_for_single_amount(line, number_dict)
 
         if len(double_amounts) > 0:
-            self.handle_double_amount(line, number_dict, double_amounts)
+            self.handle_double_amount(number_dict, double_amounts)
 
         return number_dict
 
@@ -172,7 +172,8 @@ class ARConverter:
         if len(amounts) > 0:
             for amount in amounts:
                 amount = amount.strip()
-                self.find_position(amount, line, number_dict)
+                template = '(?<!\d){}(?![/.-])'.format(amount)
+                self.find_position(amount, line, number_dict, template)
                 convert_amount = self.str_to_int_convert_amount(amount)
 
                 number_dict['amount'].update({amount: convert_amount})
@@ -183,7 +184,7 @@ class ARConverter:
 
         return
 
-    def handle_double_amount(self, line, number_dict, double_amounts):
+    def handle_double_amount(self, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
         amounts = []
         for d_amount in double_amounts:
@@ -199,6 +200,7 @@ class ARConverter:
 
     def find_position(self, word, line, number_dict, template='', simple=False):
         """Find position for word in a line. With variable template if needed"""
+
 
         if template == '':
             template = word
