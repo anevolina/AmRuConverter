@@ -7,25 +7,34 @@ from googletrans import Translator
 # Create your views here.
 
 def index(request):
-    translation = 'Перевод'
+    conv_recipe = 'Перевод'
+    English = True
+
     if request.method != 'POST':
         form = forms.MainForm()
 
+
     else:
         form = forms.MainForm(request.POST)
-        if form.is_valid():
-            converter = ARConverter()
-            translator = Translator(service_urls=[
-                'translate.google.com',
-                'translate.google.co.kr',
-            ])
-            text = form.cleaned_data['recipe']
-            recipe = ''
-            for line in text.split('\n'):
-                recipe += converter.process_line(line) + '\n'
-            translation = translator.translate(recipe, dest='ru')
-            translation = translation.text
 
-    context = {'form': form, 'translation': translation}
+        if form.is_valid():
+
+            converter = ARConverter()
+            text = form.cleaned_data['recipe']
+            conv_recipe = ''
+            for line in text.split('\n'):
+                conv_recipe += converter.process_line(line) + '\n'
+
+            to_translate = request.POST.get('to_translate')
+            if to_translate == 'RU':
+                English = False
+                translator = Translator(service_urls=[
+                'translate.google.com',
+                'translate.google.co.kr',                ])
+                translation = translator.translate(conv_recipe, dest='ru')
+                conv_recipe = translation.text
+
+
+    context = {'form': form, 'translation': conv_recipe, 'En': English}
 
     return render(request, 'converter/index.html', context)

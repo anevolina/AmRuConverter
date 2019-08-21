@@ -87,6 +87,8 @@
 
         .my-column p {
             padding-left: 15px;
+            margin-bottom: 25px;
+            margin-top: 10px;
         }
 
         .my-column > .form-group {
@@ -107,6 +109,10 @@
          color: #fff;
          background-color: #512857;
          border-color: #400330;
+        }
+
+        .form-check-label{
+            font-weight: normal;
         }
 
     </style>
@@ -130,6 +136,16 @@
                     </div>
                  </div>
             </div>
+        <div class="row">
+            <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
+              <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio1" value="EN" {% if En %} checked{% endif %}>
+              <label class="form-check-label" for="inlineRadio1">Оставить на английском</label>
+            </div>
+            <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
+              <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio2" value="RU" {% if not En %} checked{% endif %}>
+              <label class="form-check-label" for="inlineRadio2">Перевести на русский</label>
+            </div>
+        </div>
             <div class="row">
                 <div class="col-md-12">
                         <button class="btn btn-primary btn-block my-btn" name="submit"> Сотвори чудо! </button>

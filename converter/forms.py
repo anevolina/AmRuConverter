@@ -5,3 +5,5 @@ class MainForm(forms.Form):
         fields = ['recipe']
 
     recipe = forms.CharField(label='', widget=forms.Textarea())
+
+
