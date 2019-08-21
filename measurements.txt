@@ -97,7 +97,7 @@ mayo, 230
 coffee, 240
 coffee brewed, 240
 coffee ground, 85
-7Up, 240
+Sprite, 240
 poppy seeds, 125
 seeds, 125
 beer, 240
