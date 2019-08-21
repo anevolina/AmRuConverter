@@ -32,7 +32,8 @@ class ARConverter:
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs', 'pound', 'pounds'],
                       ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
-                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks'], ['ml', 'milliliters', 'milliliter']]
+                      ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks'], ['ml', 'milliliters', 'milliliter'],
+                      ['inch', 'inches', 'in', "''"]]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
         demoji.download_codes()
@@ -69,8 +70,6 @@ class ARConverter:
         possible_fahrenheit = sub_dict.get('possible_F')
         all_indexes = components.get('index')
 
-        words = components.get('words')
-
         if possible_fahrenheit:
 
             old_measure = sub_dict.get('old_measure')
@@ -85,17 +84,20 @@ class ARConverter:
         if measure:
 
             if measure == 'cup':
-                result = self.convert_cups_grams(line, sub_dict, all_indexes)
+                result = self.convert_cups_grams(result, sub_dict, all_indexes)
 
             elif measure == 'oz':
-                result = self.convert_oz_grams(line, sub_dict, all_indexes)
+                result = self.convert_oz_grams(result, sub_dict, all_indexes)
 
             elif measure == 'lb':
-                result = self.convert_lb_grams(line, sub_dict, all_indexes)
+                result = self.convert_lb_grams(result, sub_dict, all_indexes)
 
             elif measure in self.ml_measures.keys():
 
-                result = self.convert_ml_gr(line, sub_dict, all_indexes)
+                result = self.convert_ml_gr(result, sub_dict, all_indexes)
+
+            elif measure == 'inch':
+                result = self.convert_inches_cm(result, sub_dict, all_indexes)
 
             elif sub_dict.get('old_measure'):
 
@@ -104,15 +106,19 @@ class ARConverter:
                 result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], all_indexes, measure_index)
 
 
+        possible_inch = components.get('possible_inch')
+        if possible_inch and not measure:
+            result = self.inch_warning(result, possible_inch)
 
         return result
 
     def delete_incorrect_symbols(self, line):
         """Replace or delete special symbols from line. Such as ½ or °"""
 
-        symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': ''}
+        symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': '', '″': 'inch',
+                              "''": 'inch', '×': 'x'}
         for key, value in symbols_to_replace.items():
-            line = line.replace(key, ' ' + value, 1).strip()
+            line = line.replace(key, ' ' + value).strip()
         line = self.deEmojify(line)
 
         return line
@@ -154,8 +160,8 @@ class ARConverter:
         """Find all numbers in a line and check words around them"""
 
         number_dict = {'amount': {}, 'measure': {}, 'old_measure': {},
-                       'possible_F': {}, 'index': {}}
-        double_amounts = self.find_double_numbers(line)
+                       'possible_F': {}, 'index': {}, 'possible_inch':{}}
+        double_amounts = self.find_double_numbers(line, number_dict)
 
         self.check_for_single_amount(line, number_dict)
 
@@ -231,18 +237,20 @@ class ARConverter:
 
         return
 
-    def find_double_numbers(self, line):
+    def find_double_numbers(self, line, number_dict):
         """Find numbers which go in pairs ex: '4 to 5 cups of flour' """
 
         amounts = self.find_numbers(line)
         d_amounts = []
 
         if len(amounts) >= 2:
-            split_words = ['to', '-']
+            split_words = ['to', '-', 'x']
             for s_word in split_words:
                 for i in range(len(amounts)-1):
-                    d_amounts += re.findall(r'{}\s*{}\s*{}'.format(amounts[i], s_word, amounts[i+1]), line)
-
+                    d_amount = re.findall(r'{}\s*{}\s*{}'.format(amounts[i], s_word, amounts[i+1]), line)
+                    d_amounts += d_amount
+                    if s_word == 'x' and len(d_amount) > 0:
+                        number_dict['possible_inch'].update({d_amount[0]: True})
         return d_amounts
 
     def find_numbers(self, line, templates=None):
@@ -378,13 +386,28 @@ class ARConverter:
 
         if warning:
             key = '(Possible mistake! {} - too much to be in Celsius. {}F = {}C)'.format(old_amount, old_amount, amount)
-            result = self.add_warning(line, key)
+            result = line + ' ' + key
 
         return result
 
-    def add_warning(self, line, key):
+    def inch_warning(self, line, possible_inches):
+        converted = []
 
-        result = line + ' ' + key
+        for key in possible_inches:
+            if possible_inches[key]:
+                a = self.find_numbers(key)
+                assert len(a) == 2, 'wrong amount: {}'.format(key)
+                a[0], a[1] = self.str_to_int_convert_amount(a[0]), self.str_to_int_convert_amount(a[1])
+                a.append(self.in_cm(a[0]))
+                a.append(self.in_cm(a[1]))
+                converted.append('{} x {} inches = {} x {} cm'.format(a[0], a[1], a[2], a[3]))
+                possible_inches.update({key: False})
+
+        if len(converted) == 0:
+            return line
+
+        result = line + '(measures might be in inches: ' + ','.join(converted) + ')'
+
         return result
 
     # High-level conversion functions
@@ -435,15 +458,24 @@ class ARConverter:
     def convert_lb_grams(self, line, sub_dict, all_indexes):
         """Convert lb to grams and replace it in the line"""
 
-        old_amount = sub_dict['amount']
         index = sub_dict.get('index')
         index_m = sub_dict.get('index_m')
 
-        grams = self.lb_grams(old_amount)
+        grams = self.lb_grams(sub_dict['amount'])
         result = self.replace_words(line, str(sub_dict['old_amount']), str(grams), all_indexes, index)
 
         result = self.replace_words(result, sub_dict['old_measure'], 'grams', all_indexes, index_m)
 
+        return result
+
+    def convert_inches_cm(self, line, sub_dict, all_indexes):
+
+        index = sub_dict.get('index')
+        index_m = sub_dict.get('index_m')
+
+        cm = self.in_cm(sub_dict['amount'])
+        result = self.replace_words(line, str(sub_dict['old_amount']), str(cm), all_indexes, index)
+        result = self.replace_words(result, sub_dict['old_measure'], 'cm', all_indexes, index_m)
 
         return result
 
@@ -464,6 +496,10 @@ class ARConverter:
         result = self.ml_measures[measure]/self.ml_measures['cup']
 
         return result
+
+    def in_cm(self, inches):
+        """Calculates centimeters from inches"""
+        return round(inches*2.54)
 
     # Auxiliary functions
     def str_to_int_convert_amount(self, amount):
