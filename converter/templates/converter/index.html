@@ -122,43 +122,58 @@
         <h1 class="header   ">Конвертер рецептов из американской системы счисления в граммы</h1>
         <hr style="width: 300px; margin-bottom: 30px;"/>
         <div>
-            <form action="{% url 'converter:index'%}" method = POST>
+            <form name="sourceForm" action="{% url 'converter:index'%}" method = POST>
                 {% csrf_token %}
 
                 <div class="row main-container">
                     <div class="col-md-6 col-sm-6 col-xs-12 my-column">
                         <h4 class="col-header">Американская</h4>
                         {% bootstrap_form form%}
+
                     </div>
                     <div class="col-md-6 col-sm-6 col-xs-12 my-column right-column">
                          <h4 class="col-header">Метрическая</h4>
                         {{translation|linebreaks}}
                     </div>
                  </div>
-            </div>
-        <div class="row">
-            <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
-              <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio1" value="EN" {% if En %} checked{% endif %}>
-              <label class="form-check-label" for="inlineRadio1">Оставить на английском</label>
-            </div>
-            <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
-              <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio2" value="RU" {% if not En %} checked{% endif %}>
-              <label class="form-check-label" for="inlineRadio2">Перевести на русский</label>
-            </div>
-        </div>
-            <div class="row">
-                <div class="col-md-12">
-                        <button class="btn btn-primary btn-block my-btn" name="submit"> Сотвори чудо! </button>
+                <div class="row">
+                    <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
+                      <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio1" value="EN" {% if En %} checked{% endif %}>
+                      <label class="form-check-label" for="inlineRadio1">Оставить на английском</label>
+                    </div>
+                    <div class="form-check form-check-inline col-md-6 col-sm-6 col-xs-12">
+                      <input class="form-check-input" type="radio" name="to_translate" id="inlineRadio2" value="RU" {% if not En %} checked{% endif %}>
+                      <label class="form-check-label" for="inlineRadio2">Перевести на русский</label>
+                    </div>
                 </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                                <button class="btn btn-primary btn-block my-btn" type="submit">Сотвори чудо! </button>
+                        </div>
 
-            </div>
-        <div style="margin-top: 10px; margin-bottom: 10px; text-align: right;">
-            Сообщить о неисправности: <a href="mailto:anevolina@pm.me">anevolina@pm.me</a>
-        </div>
+                    </div>
+                <div style="margin-top: 10px; margin-bottom: 10px; text-align: right;">
+                    Сообщить о неисправности: <a href="mailto:anevolina@pm.me">anevolina@pm.me</a>
+                </div>
 
         </form>
 
     </div>
     {% bootstrap_javascript %}
+    <script>
+        function attachSubmitByPaste() {
+            const textarea = document.getElementById('id_recipe');
+            textarea.addEventListener('paste', function() {
+                // let's wait for the value updated in textarea first
+                setTimeout(() => {
+                    document.sourceForm.submit();
+                }, 0);
+
+            })
+        }
+
+        attachSubmitByPaste();
+    </script>
 </body>
 </html>
+
