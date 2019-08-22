@@ -45,7 +45,7 @@ class ARConverter:
 
         result = self.delete_incorrect_symbols(line)
 
-        is_link_templ = 'https|www|.com'
+        is_link_templ = 'https|www|\.com'
         is_link = re.findall(is_link_templ, result)
 
         if is_link:
