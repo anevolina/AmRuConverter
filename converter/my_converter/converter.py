@@ -406,7 +406,7 @@ class ARConverter:
         if len(converted) == 0:
             return line
 
-        result = line + '(measures might be in inches: ' + ','.join(converted) + ')'
+        result = line + ' (Measures might be in inches: ' + ','.join(converted) + ')'
 
         return result
 
