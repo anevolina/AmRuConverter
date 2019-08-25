@@ -74,10 +74,11 @@ class MeasurementsFileMaker():
         for i in range(len(multi_item) - 1):
             item_in_dictionary = self.dic_coefficients.get(multi_item[i])
             if item_in_dictionary:
-                self.add_multi_item_in_dic(multi_item, i)
+                temp_item = multi_item.copy()
+                self.add_multi_item_in_dic(temp_item, i)
 
                 check = True
-                break
+                # break
         if not check:
             print('No initial item for multi-item', multi_item)
             item_name = ' '.join(multi_item[i] for i in range(len(multi_item)-1))
