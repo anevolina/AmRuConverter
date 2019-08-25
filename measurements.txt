@@ -50,6 +50,7 @@ Cornflour, 100
 Cornmeal, 150
 Cream Cheese, 120
 Soft Cheese, 120
+mascarpone Cheese, 226
 Muscovado Sugar, 200
 Dates, 225
 Golden Syrup, 340
@@ -102,4 +103,11 @@ poppy seeds, 125
 seeds, 125
 beer, 240
 stout, 240
-
+mirin, 240
+sherry, 240
+soy sauce, 240
+sauce, 240
+espresso, 240
+simple syrup, 292
+mascarpone, 226
+broth, 240
