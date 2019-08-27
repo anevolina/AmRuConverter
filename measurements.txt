@@ -113,3 +113,4 @@ mascarpone, 226
 broth, 240
 rum, 240
 wine, 240
+brandy, 240
