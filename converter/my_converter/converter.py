@@ -36,7 +36,7 @@ class ARConverter:
                       ['inch', 'inches', 'in', "''"]]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
-        demoji.download_codes()
+        # demoji.download_codes()
 
 
     def process_line(self, line):
@@ -61,9 +61,17 @@ class ARConverter:
     def replace_in_line(self, line, amount, components):
         """Replaces amounts and measures in line"""
 
-        result = line
+        if len(components['index'][amount]) > 1:
+            result = self.replace_repeated_amount(line, amount, components)
+        else:
+            sub_dict = self.get_sub_dict_for_amount(amount, components)
+            result = self.replace_not_repeated_amount(line, sub_dict, components)
 
-        sub_dict = self.get_sub_dict_for_amount(amount, components)
+        return result
+
+    def replace_not_repeated_amount(self, line, sub_dict, components):
+
+        result = line
         amount_index = sub_dict.get('index')
         measure_index = sub_dict.get('index_m')
         measure = sub_dict.get('measure')
@@ -101,10 +109,11 @@ class ARConverter:
 
             elif sub_dict.get('old_measure'):
 
-                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), all_indexes, amount_index)
+                result = self.replace_words(result, sub_dict['old_amount'], str(sub_dict['amount']), all_indexes,
+                                            amount_index)
 
-                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], all_indexes, measure_index)
-
+                result = self.replace_words(result, sub_dict['old_measure'], sub_dict['measure'], all_indexes,
+                                            measure_index)
 
         possible_inch = components.get('possible_inch')
         if possible_inch and not measure:
@@ -112,11 +121,19 @@ class ARConverter:
 
         return result
 
+    def replace_repeated_amount(self, line, amount, components):
+        result = line
+
+        for i in range(len(components['index'][amount])):
+            sub_dict = self.get_sub_dict_for_amount(amount, components, i)
+            result = self.replace_not_repeated_amount(result, sub_dict, components)
+        return result
+
     def delete_incorrect_symbols(self, line):
         """Replace or delete special symbols from line. Such as ½ or °"""
 
         symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': '', '″': 'inch',
-                              "''": 'inch', '×': 'x'}
+                              "''": 'inch', '×': 'x', '–': '-'}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, ' ' + value).strip()
         line = self.deEmojify(line)
@@ -178,7 +195,7 @@ class ARConverter:
         if len(amounts) > 0:
             for amount in amounts:
                 amount = amount.strip()
-                template = '(?<!\d){}(?![/.-])'.format(amount)
+                template = '(?<![\d/.,]){}(?![/.])'.format(amount)
                 self.find_position(amount, line, number_dict, template)
                 convert_amount = self.str_to_int_convert_amount(amount)
 
@@ -192,15 +209,12 @@ class ARConverter:
 
     def handle_double_amount(self, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
-        amounts = []
+        # amounts = []
         for d_amount in double_amounts:
-            amounts += self.find_numbers(d_amount)
-
-        for amount in amounts:
-            amount = amount.strip()
-
-            if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
-                self.copy_sub_dict(amount, amounts, number_dict)
+            amounts = self.find_numbers(d_amount)
+            for amount in amounts:
+                if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
+                    self.copy_sub_dict(amount, amounts, number_dict)
 
         return
 
@@ -227,6 +241,14 @@ class ARConverter:
         """Copy sub dictionary from one amount to another - used in case when we have amount with 2 numbers
         for ex. '4 - 5 cups'  here we have to convert amounts for '4 cups' and for '5 cups'
         """
+        if len(set(amounts)) == 1:
+            for i in range(len(amounts)-1):
+                measure = number_dict['measure'][full_amount]
+                old_measure = number_dict['old_measure'][full_amount]
+                number_dict['measure'][full_amount].append(measure[0])
+                number_dict['old_measure'][full_amount].append(old_measure[0])
+                return
+
 
         for key in number_dict['amount']:
             if key in amounts:
@@ -276,7 +298,7 @@ class ARConverter:
         for symbol in p_s:
 
             left_pattern = r'\b[a-zA-Z][^\s]*\b[ {}]*(?=' + amount + ')'.format(symbol)
-            right_pattern = r'(?<!\d)' + amount + '[ {}]*([a-zA-Z]+)'.format(symbol)
+            right_pattern = r'(?<![\d/.,])' + amount + '[ {}]*([a-zA-Z]+)'.format(symbol)
 
             left_word = re.findall(left_pattern, line)
             right_word = re.findall(right_pattern, line)
@@ -315,10 +337,18 @@ class ARConverter:
             for i in range(len(self.units)):
                 if word.lower() in self.units[i]:
                     measure = self.units[i][0]
-                    number_dict['measure'].update({amount: measure})
-                    number_dict['old_measure'].update({amount: word})
-                    template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
+                    # number_dict['measure'].update({amount: measure})
+                    if number_dict['measure'].get(amount) and word not in number_dict['old_measure'][amount]:
+                        number_dict['measure'][amount].append(measure)
+                        number_dict['old_measure'][amount].append(word)
+                    else:
+                        number_dict['measure'][amount] = [measure]
+                        number_dict['old_measure'][amount] = [word]
+
+                    # template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
+                    template = r'(?=[ \d-]*){}|(?<=[ \d-]){}'.format(word, word)
                     self.find_position(word, line, number_dict, template)
+                    break
 
 
         # Check if word is Fahrenheit word
@@ -406,7 +436,7 @@ class ARConverter:
         if len(converted) == 0:
             return line
 
-        result = line + ' (Measures might be in inches: ' + ','.join(converted) + ')'
+        result = line + '(measures might be in inches: ' + ','.join(converted) + ')'
 
         return result
 
@@ -535,7 +565,7 @@ class ARConverter:
                 result += int(string_numbers[i])
         return result
 
-    def get_sub_dict_for_amount(self, amount, whole_dict):
+    def get_sub_dict_for_amount(self, amount, whole_dict, index=0):
         """Extract sub dictionary for the particular amount as a key value in all sub dictionaries
         For example, we have such a dictionary {'amount': {'1 1/2': 1.5, '350': 350}, 'measure': {'1 1/2': 'cup'},
                                                                                         'F_word':{'350': 'F'}}
@@ -545,15 +575,28 @@ class ARConverter:
         """
 
         result = {}
+        result.update({'old_amount': amount})
+
+        try:
+            measure = whole_dict['old_measure'].get(amount)
+            if measure:
+                if index < len(measure):
+                    measure = measure[index]
+                    result.update({'index_m': whole_dict['index'].get(measure)})
+
+        except KeyError:
+            pass
+
         for key in whole_dict:
             try:
                 am_in_keys = whole_dict[key].get(amount)
                 if am_in_keys != None:
-                    result.update({'old_amount': amount})
-                    result.update({key: whole_dict[key][amount]})
-                    measure = whole_dict['old_measure'].get(amount)
-                    if measure:
-                        result.update({'index_m': whole_dict['index'].get(measure)})
+                    if type(am_in_keys) == list:
+                        if index < len(whole_dict[key][amount]):
+                            result.update({key: whole_dict[key][amount][index]})
+                    else:
+                        result.update({key: whole_dict[key][amount]})
+
 
             except AttributeError:
                 result.update({key: whole_dict[key]})
@@ -585,8 +628,15 @@ class ARConverter:
             end = first[1]
 
         else:
-            result = line.replace(what, to_what)
-            return result
+            pre_index = re.finditer(what, line)
+            try:
+                indexes = [(pos.start(0), pos.end(0)) for pos in pre_index]
+                start = indexes[0][0]
+                end = indexes[0][1]
+
+            except:
+                result = line.replace(what, to_what)
+                return result
 
         result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
         self.update_all_indexes_after_replacement(what, to_what, start, end, all_indexes)
