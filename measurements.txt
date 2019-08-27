@@ -111,3 +111,5 @@ espresso, 240
 simple syrup, 292
 mascarpone, 226
 broth, 240
+rum, 240
+wine, 240
