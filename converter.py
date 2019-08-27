@@ -195,7 +195,7 @@ class ARConverter:
         if len(amounts) > 0:
             for amount in amounts:
                 amount = amount.strip()
-                template = '(?<![\d/.,]){}(?![/.-])'.format(amount)
+                template = '(?<![\d/.,]){}(?![/.])'.format(amount)
                 self.find_position(amount, line, number_dict, template)
                 convert_amount = self.str_to_int_convert_amount(amount)
 
@@ -209,15 +209,12 @@ class ARConverter:
 
     def handle_double_amount(self, number_dict, double_amounts):
         """Handles lines with amounts in two numbers ('4-5 cups', '4 to 5 cups' )"""
-        amounts = []
+        # amounts = []
         for d_amount in double_amounts:
-            amounts += self.find_numbers(d_amount)
-
-        for amount in amounts:
-            amount = amount.strip()
-
-            if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
-                self.copy_sub_dict(amount, amounts, number_dict)
+            amounts = self.find_numbers(d_amount)
+            for amount in amounts:
+                if self.get_sub_dict_for_amount(amount, number_dict).get('measure'):
+                    self.copy_sub_dict(amount, amounts, number_dict)
 
         return
 
@@ -244,6 +241,14 @@ class ARConverter:
         """Copy sub dictionary from one amount to another - used in case when we have amount with 2 numbers
         for ex. '4 - 5 cups'  here we have to convert amounts for '4 cups' and for '5 cups'
         """
+        if len(set(amounts)) == 1:
+            for i in range(len(amounts)-1):
+                measure = number_dict['measure'][full_amount]
+                old_measure = number_dict['old_measure'][full_amount]
+                number_dict['measure'][full_amount].append(measure[0])
+                number_dict['old_measure'][full_amount].append(old_measure[0])
+                return
+
 
         for key in number_dict['amount']:
             if key in amounts:
@@ -623,8 +628,15 @@ class ARConverter:
             end = first[1]
 
         else:
-            result = line.replace(what, to_what)
-            return result
+            pre_index = re.finditer(what, line)
+            try:
+                indexes = [(pos.start(0), pos.end(0)) for pos in pre_index]
+                start = indexes[0][0]
+                end = indexes[0][1]
+
+            except:
+                result = line.replace(what, to_what)
+                return result
 
         result = line[:start] + line[start:end].replace(what, to_what) + line[end:]
         self.update_all_indexes_after_replacement(what, to_what, start, end, all_indexes)
