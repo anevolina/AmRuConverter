@@ -74,6 +74,14 @@ class TestTemperatureConvert(unittest.TestCase):
         self.assertEqual(line2, '4088 grams milk')
         self.assertEqual(line3, '0 grams milk')
 
+    def test_process_line_special(self):
+        line1 = self.my_converter.process_line('16 oz. (2 cups) mascarpone cheese')
+        line2 = self.my_converter.process_line('oz 16 (cups 2) mascarpone cheese')
+        line3 = self.my_converter.process_line('1/2 cup and 2 tablespoons white sugar')
+        self.assertEqual(line1, '454 grams. (452 grams) mascarpone cheese')
+        self.assertEqual(line2, 'grams 454 (grams 452) mascarpone cheese')
+        self.assertEqual(line3, '100 grams and 25 grams white sugar')
+
     def test_delete_incorrect_symbols(self):
         line1 = self.my_converter.delete_incorrect_symbols('¼ cups all purpose flour')
         line2 = self.my_converter.delete_incorrect_symbols('1½ cups all purpose flour')

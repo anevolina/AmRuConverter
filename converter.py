@@ -36,7 +36,7 @@ class ARConverter:
                       ['inch', 'inches', 'in', "''"]]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
-        demoji.download_codes()
+        # demoji.download_codes()
 
 
     def process_line(self, line):
@@ -116,7 +116,7 @@ class ARConverter:
         """Replace or delete special symbols from line. Such as ½ or °"""
 
         symbols_to_replace = {'⅛': '1/8', '½': '1/2', '⅓': '1/3', '¼': '1/4', '⅔': '2/3', '¾': '3/4', '°': '', '″': 'inch',
-                              "''": 'inch', '×': 'x'}
+                              "''": 'inch', '×': 'x', '–': '-'}
         for key, value in symbols_to_replace.items():
             line = line.replace(key, ' ' + value).strip()
         line = self.deEmojify(line)
@@ -178,7 +178,7 @@ class ARConverter:
         if len(amounts) > 0:
             for amount in amounts:
                 amount = amount.strip()
-                template = '(?<!\d){}(?![/.-])'.format(amount)
+                template = '(?<![\d/.,]){}(?![/.-])'.format(amount)
                 self.find_position(amount, line, number_dict, template)
                 convert_amount = self.str_to_int_convert_amount(amount)
 
@@ -317,7 +317,8 @@ class ARConverter:
                     measure = self.units[i][0]
                     number_dict['measure'].update({amount: measure})
                     number_dict['old_measure'].update({amount: word})
-                    template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
+                    # template = r'[ \d-]{}[ \d-]*|[ \d-]*{}[ \d-]'.format(word, word)
+                    template = r'(?=[ \d-]*){}|(?<=[ \d-]){}'.format(word, word)
                     self.find_position(word, line, number_dict, template)
 
 
