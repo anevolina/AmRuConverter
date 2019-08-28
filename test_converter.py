@@ -77,11 +77,17 @@ class TestTemperatureConvert(unittest.TestCase):
     def test_process_line_special(self):
         test_lines = ['16 oz. (2 cups) mascarpone cheese', 'oz 16 (cups 2) mascarpone cheese',
                       '1/2 cup and 2 tablespoons white sugar', '1 pound stew meat, cut into 1 inch squares',
-                      '1 (24-ounce) jar spaghetti sauce', 'Line an 8x8 inch baking pan with aluminum foil']
+                      '1 (24-ounce) jar spaghetti sauce', 'Line an 8x8 inch baking pan with aluminum foil',
+                      '1/4 cup (2floz/57ml) brandy, optional', 'Preheat oven to 450°',
+                      'Lightly brush a 24 x 10cm terrine', 'Lightly brush a 24 x 10 inch terrine',
+                      '1/8-inch thick']
 
         result_lines = ['454 grams. (452 grams) mascarpone cheese', 'grams 454 (grams 452) mascarpone cheese',
                         '100 grams and 25 grams white sugar', '454 grams stew meat, cut into 3 cm squares',
-                        '1 (680-grams) jar spaghetti sauce', 'Line an 20x20 cm baking pan with aluminum foil']
+                        '1 (680-grams) jar spaghetti sauce', 'Line an 20x20 cm baking pan with aluminum foil',
+                        '60 grams (59grams/57ml) brandy, optional', 'Preheat oven to 232 °C.',
+                        'Lightly brush a 24 x 10cm terrine', 'Lightly brush a 61 x 25 cm terrine',
+                        '0.3-cm thick']
 
         for i in range(len(test_lines)):
             self.assertEqual(self.my_converter.process_line(test_lines[i]), result_lines[i])
@@ -126,8 +132,8 @@ class TestTemperatureConvert(unittest.TestCase):
         line1 = self.my_converter.update_farenheits('Preheat oven till 350 F', sub_dict1, all_indexes)
         line2 = self.my_converter.update_farenheits('Preheat oven till 350', sub_dict2, all_indexes)
 
-        self.assertEqual(line1, 'Preheat oven till 177 Celsius')
-        self.assertEqual(line2, 'Preheat oven till 177')
+        self.assertEqual(line1, 'Preheat oven till 177 °C. ')
+        self.assertEqual(line2, 'Preheat oven till 177 °C.')
 
 
 

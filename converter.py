@@ -28,12 +28,13 @@ class ARConverter:
         with open(os.path.join(file_dir, 'coefficients.json'), 'r') as coefficients:
             self.coefficients = json.load(coefficients)
 
-        self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240, 'stick': 120}
+        self.ml_measures = {'tbsp': 15, 'gallon': 3875.4, 'pint': 473, 'quart ': 946.4, 'cup': 240, 'stick': 120,
+                            'floz': 29.5}
 
         self.units = [['cup', 'cups', 'c'], ['oz', 'ounce', 'ounces'], ['lb', 'lbs', 'pound', 'pounds'],
-                      ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon'], ['tbsp', 'tablespoon', 'tablespoons'], ['gallon', 'gallons'],
+                      ['grams', 'gr', 'gram', 'g'], ['tsp', 'teaspoon', 'ts'], ['tbsp', 'tablespoon', 'tablespoons', 'tbs'], ['gallon', 'gallons'],
                       ['pint', 'pints'], ['quart', 'quarts'], ['stick', 'sticks'], ['ml', 'milliliters', 'milliliter'],
-                      ['inch', 'inches', 'in', "''"]]
+                      ['floz'], ['inch', 'inches', 'in', "''"], ['cm', 'cantimeters']]
         self.fahrenheit_names = ['f', 'fahrenheit', 'fahrenheits']
         self.celsius_names = ['c', 'celsius']
         # demoji.download_codes()
@@ -403,20 +404,22 @@ class ARConverter:
         index = sub_dict['index']
 
         amount = self.fahrenheit_celsius(old_amount)
-        result = self.replace_words(line, str(old_amount), str(amount), all_indexes, index)
+        result = self.replace_words(line, str(old_amount), str(amount) + ' °C.', all_indexes, index)
+        convert = False
 
         for word in words:
             if word.lower() in self.fahrenheit_names:
                 template = '[ \d-]{}[ ]'.format(word)
-                index = self.find_position(word, line, sub_dict, template, simple=True)
-                result = self.replace_words(result, word, 'Celsius', all_indexes, index)
+                index = self.find_position(word, result, sub_dict, template, simple=True)
+                result = self.replace_words(result, word, '', all_indexes, index)
+                convert = True
 
-            if word.lower() in self.celsius_names:
-                warning = True
-
-        if warning:
-            key = '(Possible mistake! {} - too much to be in Celsius. {}F = {}C)'.format(old_amount, old_amount, amount)
-            result = line + ' ' + key
+        if not convert:
+            for word in words:
+                if word.lower() in self.celsius_names:
+                    key = '(Possible mistake! {} - too much to be in Celsius. {}F = {}C)'.format(old_amount, old_amount,
+                                                                                                 amount)
+                    result = line + ' ' + key
 
         return result
 
@@ -529,7 +532,7 @@ class ARConverter:
 
     def in_cm(self, inches):
         """Calculates centimeters from inches"""
-        return round(inches*2.54)
+        return round(inches*2.54, 2)
 
     # Auxiliary functions
     def str_to_int_convert_amount(self, amount):
