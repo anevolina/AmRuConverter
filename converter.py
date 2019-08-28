@@ -267,7 +267,7 @@ class ARConverter:
         d_amounts = []
 
         if len(amounts) >= 2:
-            split_words = ['to', '-', 'x']
+            split_words = ['to', '-', 'x', '\+']
             for s_word in split_words:
                 for i in range(len(amounts)-1):
                     d_amount = re.findall(r'{}\s*{}\s*{}'.format(amounts[i], s_word, amounts[i+1]), line)
@@ -532,7 +532,12 @@ class ARConverter:
 
     def in_cm(self, inches):
         """Calculates centimeters from inches"""
-        return round(inches*2.54, 2)
+        result = inches*2.54
+        
+        if result <= 5:
+            return round(result, 2)
+
+        return round(result)
 
     # Auxiliary functions
     def str_to_int_convert_amount(self, amount):

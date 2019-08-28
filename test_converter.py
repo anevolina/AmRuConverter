@@ -80,14 +80,14 @@ class TestTemperatureConvert(unittest.TestCase):
                       '1 (24-ounce) jar spaghetti sauce', 'Line an 8x8 inch baking pan with aluminum foil',
                       '1/4 cup (2floz/57ml) brandy, optional', 'Preheat oven to 450°',
                       'Lightly brush a 24 x 10cm terrine', 'Lightly brush a 24 x 10 inch terrine',
-                      '1/8-inch thick']
+                      '1/8-inch thick', '3 +3 tbsp sugar']
 
         result_lines = ['454 grams. (452 grams) mascarpone cheese', 'grams 454 (grams 452) mascarpone cheese',
-                        '100 grams and 25 grams white sugar', '454 grams stew meat, cut into 3 cm squares',
+                        '100 grams and 25 grams white sugar', '454 grams stew meat, cut into 2.54 cm squares',
                         '1 (680-grams) jar spaghetti sauce', 'Line an 20x20 cm baking pan with aluminum foil',
                         '60 grams (59grams/57ml) brandy, optional', 'Preheat oven to 232 °C.',
                         'Lightly brush a 24 x 10cm terrine', 'Lightly brush a 61 x 25 cm terrine',
-                        '0.3-cm thick']
+                        '0.3-cm thick', '38 +38 grams sugar']
 
         for i in range(len(test_lines)):
             self.assertEqual(self.my_converter.process_line(test_lines[i]), result_lines[i])
