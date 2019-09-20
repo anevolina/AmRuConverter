@@ -47,8 +47,12 @@ class ARConverter:
     def set_logger(self):
         logger = logging.getLogger('ARConverter')
         logger.setLevel(logging.INFO)
+
+        os.mkdir('log')
+
         file_handler = logging.FileHandler('log/converter_log.log')
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
