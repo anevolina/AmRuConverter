@@ -11,3 +11,4 @@ converter/__pycache__/
 converter/migrations/__pycache__/
 converter/my_converter/__pycache__/
 tmp
+log
