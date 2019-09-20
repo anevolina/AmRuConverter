@@ -48,7 +48,10 @@ class ARConverter:
         logger = logging.getLogger('ARConverter')
         logger.setLevel(logging.INFO)
 
-        os.mkdir('log')
+        try:
+            os.mkdir('log')
+        except FileExistsError:
+            pass
 
         file_handler = logging.FileHandler('log/converter_log.log')
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
